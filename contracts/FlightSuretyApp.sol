@@ -4,13 +4,14 @@ pragma solidity ^0.8.0;
 // OpenZeppelin's SafeMath library, when used correctly, protects agains such bugs
 // More info: https://www.nccgroup.trust/us/about-us/newsroom-and-events/blog/2018/november/smart-contract-insecurity-bad-arithmetic/
 
-import "../node_modules/@openzeppelin/contracts/utils/math/SafeMath.sol";
+import '../node_modules/@openzeppelin/contracts/utils/math/SafeMath.sol';
+import './FlightSuretyData.sol';
 
 /************************************************** */
 /* FlightSurety Smart Contract                      */
 /************************************************** */
 contract FlightSuretyApp {
-    using SafeMath for uint256; // Allow SafeMath functions to be called for all uint256 types (similar to "prototype" in Javascript)
+    using SafeMath for uint256; // Allow SafeMath functions to be called for all uint256 types (similar to 'prototype' in Javascript)
 
     /********************************************************************************************/
     /*                                       DATA VARIABLES                                     */
@@ -26,6 +27,7 @@ contract FlightSuretyApp {
 
     bool private operational = true;
     address private contractOwner; // Account used to deploy contract
+    FlightSuretyData private flightSuretyData;
 
     struct Flight {
         bool isRegistered;
@@ -43,20 +45,20 @@ contract FlightSuretyApp {
     // before a function is allowed to be executed.
 
     /**
-     * @dev Modifier that requires the "operational" boolean variable to be "true"
+     * @dev Modifier that requires the 'operational' boolean variable to be 'true'
      *      This is used on all state changing functions to pause the contract in
      *      the event there is an issue that needs to be fixed
      */
     modifier requireIsOperational() {
-        require(operational, "Contract is currently not operational");
-        _; // All modifiers require an "_" which indicates where the function body will be added
+        require(operational, 'Contract is currently not operational');
+        _; // All modifiers require an '_' which indicates where the function body will be added
     }
 
     /**
-     * @dev Modifier that requires the "ContractOwner" account to be the function caller
+     * @dev Modifier that requires the 'ContractOwner' account to be the function caller
      */
     modifier requireContractOwner() {
-        require(msg.sender == contractOwner, "Caller is not contract owner");
+        require(msg.sender == contractOwner, 'Caller is not contract owner');
         _;
     }
 
@@ -68,8 +70,9 @@ contract FlightSuretyApp {
      * @dev Contract constructor
      *
      */
-    constructor() public {
+    constructor(address dataContract) public {
         contractOwner = msg.sender;
+        flightSuretyData = FlightSuretyData(dataContract);
     }
 
     /********************************************************************************************/
@@ -199,7 +202,7 @@ contract FlightSuretyApp {
     // Register an oracle with the contract
     function registerOracle() external payable {
         // Require registration fee
-        require(msg.value >= REGISTRATION_FEE, "Registration fee is required");
+        require(msg.value >= REGISTRATION_FEE, 'Registration fee is required');
 
         uint8[3] memory indexes = generateIndexes(msg.sender);
 
@@ -209,7 +212,7 @@ contract FlightSuretyApp {
     function getMyIndexes() external view returns (uint8[3] memory) {
         require(
             oracles[msg.sender].isRegistered,
-            "Not registered as an oracle"
+            'Not registered as an oracle'
         );
 
         return oracles[msg.sender].indexes;
@@ -230,7 +233,7 @@ contract FlightSuretyApp {
             (oracles[msg.sender].indexes[0] == index) ||
                 (oracles[msg.sender].indexes[1] == index) ||
                 (oracles[msg.sender].indexes[2] == index),
-            "Index does not match oracle request"
+            'Index does not match oracle request'
         );
 
         bytes32 key = keccak256(
@@ -238,7 +241,7 @@ contract FlightSuretyApp {
         );
         require(
             oracleResponses[key].isOpen,
-            "Flight or timestamp do not match oracle request"
+            'Flight or timestamp do not match oracle request'
         );
 
         oracleResponses[key].responses[statusCode].push(msg.sender);
