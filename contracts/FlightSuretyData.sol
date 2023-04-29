@@ -67,7 +67,7 @@ contract FlightSuretyData {
      * @dev Modifier that requires the registed airline account to be the function caller
      */
     modifier requireRegistedAirline() {
-        require(airlines[msg.sender] != bytes4(0x0), 'Airline does not exist');
+        require(airlines[msg.sender].airlineAddress != address(0x0), 'Airline does not exist');
         require(airlines[msg.sender].isRegisted, "Airline is not registed");
         _;
     }
@@ -76,7 +76,7 @@ contract FlightSuretyData {
      * @dev Modifier that requires the function caller to be not voted yet
      */
     modifier requireNotVoted(address _airlineAddress) {
-        require(airlines[_airlineAddress] != bytes4(0x0), 'Airline to be voted does not exist');
+        require(airlines[_airlineAddress].airlineAddress != address(0x0), 'Airline to be voted does not exist');
         require(airlines[_airlineAddress].votes[msg.sender] != 1, "Already voted");
         _;
     }
@@ -113,21 +113,19 @@ contract FlightSuretyData {
      */
     function registerAirline(
         address _airlineAddress,
-        string _name
+        string calldata _name
     ) external requireIsOperational requireRegistedAirline {
-        Airline _airline = Airline({
-            airlineAddress: _airlineAddress,
-            name: _name,
-            isRegisted: false,
-            isFunded: false,
-        });
+        Airline storage _airline = airlines[_airlineAddress];
+        _airline.airlineAddress = _airlineAddress;
+        _airline.name = _name;
+        _airline.isRegisted = false;
+        _airline.isFunded = false;
         _airline.votes[msg.sender] = 1;
         _airline.voteCount = 1;
         if (registedAirLinesCount <= AIRLINE_FREELY_REGISTRY_MAX_NUMBER) {
             _airline.isRegisted = true;
             registedAirLinesCount = registedAirLinesCount.add(1);
         }
-        airlines[_airlineAddress] = _airline;
     }
 
 /**
@@ -138,11 +136,10 @@ contract FlightSuretyData {
     function voteAirline(
         address _airlineAddress
     ) external requireIsOperational requireRegistedAirline requireNotVoted(_airlineAddress){
-        Airline _airline = airlines[_airlineAddress];
-        _airline.votes[msg.sender] = 1;
-        _airline.voteCount = _airline.voteCount.add(1);
-        if (!_airline.isRegisted && _airline.voteCount >= registedAirLinesCount.div(2)) {
-            _airline.isRegisted = true;
+        airlines[_airlineAddress].votes[msg.sender] = 1;
+        airlines[_airlineAddress].voteCount = airlines[_airlineAddress].voteCount.add(1);
+        if (!airlines[_airlineAddress].isRegisted && airlines[_airlineAddress].voteCount >= registedAirLinesCount.div(2)) {
+            airlines[_airlineAddress].isRegisted = true;
             registedAirLinesCount = registedAirLinesCount.add(1);
         }
     }
