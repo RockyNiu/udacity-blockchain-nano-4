@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.0;
 
 // It's important to avoid vulnerabilities due to numeric overflow bugs
@@ -70,7 +72,7 @@ contract FlightSuretyApp {
      * @dev Contract constructor
      *
      */
-    constructor(address payable dataContractAddress) public {
+    constructor(address payable dataContractAddress) {
         contractOwner = msg.sender;
         flightSuretyData = FlightSuretyData(dataContractAddress);
     }
@@ -79,7 +81,7 @@ contract FlightSuretyApp {
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
 
-    function isOperational() public returns (bool) {
+    function isOperational() public view returns (bool) {
         return operational;
     }
 
