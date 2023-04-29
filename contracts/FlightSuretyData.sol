@@ -11,6 +11,16 @@ contract FlightSuretyData {
 
     address private contractOwner; // Account used to deploy contract
     bool private operational = true; // Blocks all state changes throughout the contract if false
+    mapping(address => Airline) airlines;
+    uint256 registedAirLinesCount = 0;
+
+    struct Airline {
+        address airlineAddress;
+        string name;
+        bool isRegisted;
+        bool isFunded;
+        address[] votes;
+    }
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
@@ -49,6 +59,17 @@ contract FlightSuretyData {
         _;
     }
 
+    /**
+     * @dev Modifier that requires the registed airline account to be the function caller
+     */
+    modifier requireRegistedAirline(address _airlineAddress) {
+        require(
+            airlines[msg.sender] && airlines[msg.sender].isRegisted,
+            "Airline is not registed"
+        );
+        _;
+    }
+
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
@@ -80,7 +101,18 @@ contract FlightSuretyData {
      *      Can only be called from FlightSuretyApp contract
      *
      */
-    function registerAirline() external pure {}
+    function registerAirline(
+        address _airlineAddress,
+        string _name
+    ) external requireIsOperational requireRegistedAirline {
+        airlines[_airlineAddress] = Airline({
+            airlineAddress: _airlineAddress,
+            name: _name,
+            isRegisted: false,
+            isFunded: false,
+            votes: [_airlineAddress]
+        });
+    }
 
     /**
      * @dev Buy insurance for a flight
