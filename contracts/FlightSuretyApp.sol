@@ -70,16 +70,16 @@ contract FlightSuretyApp {
      * @dev Contract constructor
      *
      */
-    constructor(address dataContract) public {
+    constructor(address payable dataContractAddress) public {
         contractOwner = msg.sender;
-        flightSuretyData = FlightSuretyData(dataContract);
+        flightSuretyData = FlightSuretyData(dataContractAddress);
     }
 
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
 
-    function isOperational() public pure returns (bool) {
+    function isOperational() public returns (bool) {
         return operational;
     }
 
