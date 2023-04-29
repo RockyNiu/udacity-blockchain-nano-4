@@ -15,9 +15,12 @@ contract FlightSuretyData {
     uint256 private constant MIN_ACTIVE_FUND = 10 ether;
 
     address private contractOwner; // Account used to deploy contract
+    mapping(address => uint8) private authorizedContracts; // Contract who could add new airline
+
+    mapping(address => Airline) private airlines; // all airlines added
+    uint256 private registedAirLinesCount;
+
     bool private operational = true; // Blocks all state changes throughout the contract if false
-    mapping(address => Airline) private airlines;
-    uint256 private registedAirLinesCount = 0;
 
     struct Airline {
         address airlineAddress;
@@ -71,15 +74,22 @@ contract FlightSuretyData {
         _;
     }
 
+    modifier requireIsCallerAuthorized() {
+        require(
+            authorizedContracts[msg.sender] == 1,
+            "Caller is not authorized"
+        );
+        _;
+    }
     /**
      * @dev Modifier that requires the registed airline account to be the function caller
      */
     modifier requireRegistedAirline() {
         require(
-            airlines[msg.sender].airlineAddress != address(0x0),
+            airlines[tx.origin].airlineAddress != address(0x0),
             "Airline does not exist"
         );
-        require(airlines[msg.sender].isRegisted, "Airline is not registed");
+        require(airlines[tx.origin].isRegisted, "Airline is not registed");
         _;
     }
 
@@ -120,6 +130,18 @@ contract FlightSuretyData {
         operational = mode;
     }
 
+    function authorizeContract(
+        address _contractAddress
+    ) external requireContractOwner {
+        authorizedContracts[_contractAddress] = 1;
+    }
+
+    function deauthorizeContract(
+        address _contractAddress
+    ) external requireContractOwner {
+        delete authorizedContracts[_contractAddress];
+    }
+
     /********************************************************************************************/
     /*                                     SMART CONTRACT FUNCTIONS                             */
     /********************************************************************************************/
@@ -132,14 +154,19 @@ contract FlightSuretyData {
     function registerAirline(
         address _airlineAddress,
         string calldata _name
-    ) external requireIsOperational requireRegistedAirline {
+    )
+        external
+        requireIsOperational
+        requireRegistedAirline
+        requireIsCallerAuthorized
+    {
         Airline storage _airline = airlines[_airlineAddress];
         _airline.airlineAddress = _airlineAddress;
         _airline.name = _name;
         _airline.isRegisted = false;
         _airline.isActive = false;
         _airline.fund = 0;
-        _airline.votes[msg.sender] = 1;
+        _airline.votes[tx.origin] = 1;
         _airline.voteCount = 1;
         emit AirlineIsPreRegisted(_airlineAddress, _name);
         if (registedAirLinesCount <= AIRLINE_FREELY_REGISTRY_MAX_NUMBER) {
@@ -147,7 +174,6 @@ contract FlightSuretyData {
             registedAirLinesCount = registedAirLinesCount.add(1);
             emit AirlineIsRegisted(_airlineAddress, _name);
         }
-
     }
 
     /**
@@ -172,7 +198,10 @@ contract FlightSuretyData {
         ) {
             airlines[_airlineAddress].isRegisted = true;
             registedAirLinesCount = registedAirLinesCount.add(1);
-            emit AirlineIsRegisted(_airlineAddress, airlines[_airlineAddress].name);
+            emit AirlineIsRegisted(
+                _airlineAddress,
+                airlines[_airlineAddress].name
+            );
         }
     }
 
@@ -188,7 +217,10 @@ contract FlightSuretyData {
     {
         airlines[msg.sender].fund = airlines[msg.sender].fund.add(msg.value);
         emit FundAirline(msg.sender, airlines[msg.sender].name);
-        if (!airlines[msg.sender].isActive && airlines[msg.sender].fund >= MIN_ACTIVE_FUND) {
+        if (
+            !airlines[msg.sender].isActive &&
+            airlines[msg.sender].fund >= MIN_ACTIVE_FUND
+        ) {
             airlines[msg.sender].isActive = true;
             emit AirlineIsActivated(msg.sender, airlines[msg.sender].name);
         }
@@ -234,10 +266,9 @@ contract FlightSuretyData {
         fund();
     }
 
-        /**
+    /**
      * @dev Receive function
      *
      */
-    receive() external payable {
-    }
+    receive() external payable {}
 }

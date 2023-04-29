@@ -9,6 +9,7 @@ module.exports = function (deployer) {
         .then((flightSuretyData) => {
             return deployer.deploy(FlightSuretyApp, flightSuretyData.address)
                 .then((flightSuretyApp) => {
+                    flightSuretyData.authorizeContract(flightSuretyApp.address);
                     const config = {
                         localhost: {
                             url: 'http://localhost:8545',
