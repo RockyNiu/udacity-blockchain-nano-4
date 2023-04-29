@@ -18,14 +18,14 @@ contract FlightSuretyData {
     mapping(address => uint8) private authorizedContracts; // Contract who could add new airline
 
     mapping(address => Airline) private airlines; // all airlines added
-    uint256 private registedAirLinesCount;
+    uint256 private registeredAirLinesCount;
 
     bool private operational = true; // Blocks all state changes throughout the contract if false
 
     struct Airline {
         address airlineAddress;
         string name;
-        bool isRegisted;
+        bool isRegistered;
         bool isActive;
         uint256 fund;
         mapping(address => uint8) votes;
@@ -36,8 +36,8 @@ contract FlightSuretyData {
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
 
-    event AirlineIsPreRegisted(address _airlineAddress, string _name);
-    event AirlineIsRegisted(address _airlineAddress, string _name);
+    event AirlineIsPreRegistered(address _airlineAddress, string _name);
+    event AirlineIsRegistered(address _airlineAddress, string _name);
     event FundAirline(address _airlineAddress, string _name);
     event AirlineIsActivated(address _airlineAddress, string _name);
 
@@ -82,14 +82,14 @@ contract FlightSuretyData {
         _;
     }
     /**
-     * @dev Modifier that requires the registed airline account to be the function caller
+     * @dev Modifier that requires the registered airline account to be the function caller
      */
-    modifier requireRegistedAirline() {
+    modifier requireRegisteredAirline() {
         require(
             airlines[tx.origin].airlineAddress != address(0x0),
             "Airline does not exist"
         );
-        require(airlines[tx.origin].isRegisted, "Airline is not registed");
+        require(airlines[tx.origin].isRegistered, "Airline is not registered");
         _;
     }
 
@@ -156,23 +156,24 @@ contract FlightSuretyData {
         string calldata _name
     )
         external
+        payable
         requireIsOperational
-        requireRegistedAirline
+        requireRegisteredAirline
         requireIsCallerAuthorized
     {
         Airline storage _airline = airlines[_airlineAddress];
         _airline.airlineAddress = _airlineAddress;
         _airline.name = _name;
-        _airline.isRegisted = false;
+        _airline.isRegistered = false;
         _airline.isActive = false;
-        _airline.fund = 0;
+        _airline.fund = msg.value;
         _airline.votes[tx.origin] = 1;
         _airline.voteCount = 1;
-        emit AirlineIsPreRegisted(_airlineAddress, _name);
-        if (registedAirLinesCount <= AIRLINE_FREELY_REGISTRY_MAX_NUMBER) {
-            _airline.isRegisted = true;
-            registedAirLinesCount = registedAirLinesCount.add(1);
-            emit AirlineIsRegisted(_airlineAddress, _name);
+        emit AirlineIsPreRegistered(_airlineAddress, _name);
+        if (registeredAirLinesCount <= AIRLINE_FREELY_REGISTRY_MAX_NUMBER) {
+            _airline.isRegistered = true;
+            registeredAirLinesCount = registeredAirLinesCount.add(1);
+            emit AirlineIsRegistered(_airlineAddress, _name);
         }
     }
 
@@ -185,20 +186,20 @@ contract FlightSuretyData {
     )
         external
         requireIsOperational
-        requireRegistedAirline
+        requireRegisteredAirline
         requireNotVoted(_airlineAddress)
     {
-        airlines[_airlineAddress].votes[msg.sender] = 1;
+        airlines[_airlineAddress].votes[tx.origin] = 1;
         airlines[_airlineAddress].voteCount = airlines[_airlineAddress]
             .voteCount
             .add(1);
         if (
-            !airlines[_airlineAddress].isRegisted &&
-            airlines[_airlineAddress].voteCount >= registedAirLinesCount.div(2)
+            !airlines[_airlineAddress].isRegistered &&
+            airlines[_airlineAddress].voteCount >= registeredAirLinesCount.div(2)
         ) {
-            airlines[_airlineAddress].isRegisted = true;
-            registedAirLinesCount = registedAirLinesCount.add(1);
-            emit AirlineIsRegisted(
+            airlines[_airlineAddress].isRegistered = true;
+            registeredAirLinesCount = registeredAirLinesCount.add(1);
+            emit AirlineIsRegistered(
                 _airlineAddress,
                 airlines[_airlineAddress].name
             );
@@ -213,17 +214,26 @@ contract FlightSuretyData {
         external
         payable
         requireIsOperational
-        requireRegistedAirline
+        requireRegisteredAirline
     {
-        airlines[msg.sender].fund = airlines[msg.sender].fund.add(msg.value);
-        emit FundAirline(msg.sender, airlines[msg.sender].name);
+        airlines[tx.origin].fund = airlines[tx.origin].fund.add(msg.value);
+        emit FundAirline(tx.origin, airlines[tx.origin].name);
         if (
-            !airlines[msg.sender].isActive &&
-            airlines[msg.sender].fund >= MIN_ACTIVE_FUND
+            !airlines[tx.origin].isActive &&
+            airlines[tx.origin].fund >= MIN_ACTIVE_FUND
         ) {
-            airlines[msg.sender].isActive = true;
-            emit AirlineIsActivated(msg.sender, airlines[msg.sender].name);
+            airlines[tx.origin].isActive = true;
+            emit AirlineIsActivated(tx.origin, airlines[tx.origin].name);
         }
+    }
+
+        /**
+     * @dev Get the airline register status
+     *
+     * @return A bool indicates the airline if registered or not
+     */
+    function isRegistedAirline(address _airlineAddress) external view returns (bool) {
+        return airlines[_airlineAddress].isRegistered;
     }
 
     /**

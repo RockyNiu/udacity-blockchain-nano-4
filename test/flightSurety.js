@@ -1,13 +1,13 @@
 
-var Test = require('../config/testConfig.js');
-var BigNumber = require('bignumber.js');
+const Test = require('../config/testConfig.js');
+const BigNumber = require('bignumber.js');
 
 contract('Flight Surety Tests', async (accounts) => {
 
-    var config;
+    let config;
     before('setup contract', async () => {
         config = await Test.Config(accounts);
-        await config.flightSuretyData.authorizeCaller(config.flightSuretyApp.address);
+        await config.flightSuretyData.authorizeContract(config.flightSuretyApp.address);
     });
 
     /****************************************************************************************/
@@ -17,7 +17,7 @@ contract('Flight Surety Tests', async (accounts) => {
     it(`(multiparty) has correct initial isOperational() value`, async function () {
 
         // Get operating status
-        let status = await config.flightSuretyData.isOperational.call();
+        const status = await config.flightSuretyData.isOperational.call();
         assert.equal(status, true, "Incorrect initial operating status value");
 
     });
@@ -56,7 +56,7 @@ contract('Flight Surety Tests', async (accounts) => {
 
         let reverted = false;
         try {
-            await config.flightSurety.setTestingMode(true);
+            await config.flightSuretyData.registerAirline(true);
         }
         catch (e) {
             reverted = true;
@@ -71,7 +71,7 @@ contract('Flight Surety Tests', async (accounts) => {
     it('(airline) cannot register an Airline using registerAirline() if it is not funded', async () => {
 
         // ARRANGE
-        let newAirline = accounts[2];
+        const newAirline = accounts[2];
 
         // ACT
         try {
@@ -80,7 +80,7 @@ contract('Flight Surety Tests', async (accounts) => {
         catch (e) {
 
         }
-        let result = await config.flightSuretyData.isAirline.call(newAirline);
+        const result = await config.flightSuretyData.isRegistedAirline(newAirline);
 
         // ASSERT
         assert.equal(result, false, "Airline should not be able to register another airline if it hasn't provided funding");
