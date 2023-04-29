@@ -9,17 +9,21 @@ contract FlightSuretyData {
     /*                                       DATA VARIABLES                                     */
     /********************************************************************************************/
 
+    uint8 private constant AIRLINE_FREELY_REGISTRY_MAX_NUMBER = 4;
+
     address private contractOwner; // Account used to deploy contract
     bool private operational = true; // Blocks all state changes throughout the contract if false
-    mapping(address => Airline) airlines;
-    uint256 registedAirLinesCount = 0;
+    mapping(address => Airline) private airlines;
+
+    uint256 private registedAirLinesCount = 0;
 
     struct Airline {
         address airlineAddress;
         string name;
         bool isRegisted;
         bool isFunded;
-        address[] votes;
+        mapping(address => uint8) votes;
+        uint256 voteCount;
     }
 
     /********************************************************************************************/
@@ -62,14 +66,20 @@ contract FlightSuretyData {
     /**
      * @dev Modifier that requires the registed airline account to be the function caller
      */
-    modifier requireRegistedAirline(address _airlineAddress) {
-        require(
-            airlines[msg.sender] && airlines[msg.sender].isRegisted,
-            "Airline is not registed"
-        );
+    modifier requireRegistedAirline() {
+        require(airlines[msg.sender] != bytes4(0x0), 'Airline does not exist');
+        require(airlines[msg.sender].isRegisted, "Airline is not registed");
         _;
     }
 
+    /**
+     * @dev Modifier that requires the function caller to be not voted yet
+     */
+    modifier requireNotVoted(address _airlineAddress) {
+        require(airlines[_airlineAddress] != bytes4(0x0), 'Airline to be voted does not exist');
+        require(airlines[_airlineAddress].votes[msg.sender] != 1, "Already voted");
+        _;
+    }
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
@@ -105,15 +115,37 @@ contract FlightSuretyData {
         address _airlineAddress,
         string _name
     ) external requireIsOperational requireRegistedAirline {
-        airlines[_airlineAddress] = Airline({
+        Airline _airline = Airline({
             airlineAddress: _airlineAddress,
             name: _name,
             isRegisted: false,
             isFunded: false,
-            votes: [_airlineAddress]
         });
+        _airline.votes[msg.sender] = 1;
+        _airline.voteCount = 1;
+        if (registedAirLinesCount <= AIRLINE_FREELY_REGISTRY_MAX_NUMBER) {
+            _airline.isRegisted = true;
+            registedAirLinesCount = registedAirLinesCount.add(1);
+        }
+        airlines[_airlineAddress] = _airline;
     }
 
+/**
+     * @dev Add an airline to the registration queue
+     *      Can only be called from FlightSuretyApp contract
+     *
+     */
+    function voteAirline(
+        address _airlineAddress
+    ) external requireIsOperational requireRegistedAirline requireNotVoted(_airlineAddress){
+        Airline _airline = airlines[_airlineAddress];
+        _airline.votes[msg.sender] = 1;
+        _airline.voteCount = _airline.voteCount.add(1);
+        if (!_airline.isRegisted && _airline.voteCount >= registedAirLinesCount.div(2)) {
+            _airline.isRegisted = true;
+            registedAirLinesCount = registedAirLinesCount.add(1);
+        }
+    }
     /**
      * @dev Buy insurance for a flight
      *
