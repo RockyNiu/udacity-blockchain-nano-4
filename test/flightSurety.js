@@ -31,9 +31,11 @@ describe('Flight Surety Tests', async () => {
 					console.log(e);
 				}
 				let result = await config.flightSuretyData.isAirlineActive(newAirline);
+				let registerAirlinesNumber = (await config.flightSuretyData.getPendingAirlineAddresses()).length;
 
 				// ASSERT
 				assert.equal(result, false, "Airline should not be able to activate another airline if it hasn't provided funding");
+				assert.equal(registerAirlinesNumber, 2, "There should be 2 registered airlines");
 
 				// ARRANGE
 				newAirline = accounts[3];
@@ -47,10 +49,12 @@ describe('Flight Surety Tests', async () => {
 					console.log(e);
 				}
 				result = await config.flightSuretyData.isAirlineActive(newAirline);
+				registerAirlinesNumber = (await config.flightSuretyData.getPendingAirlineAddresses()).length;
 
 				// ASSERT
 				assert.equal(result, false, "Airline should not be able to activate another airline if it hasn't provided enough funding");
-			
+				assert.equal(registerAirlinesNumber, 3, "There should be 3 registered airlines");
+
 				// ARRANGE
 				newAirline = accounts[4];
 				value = web3.utils.toWei('10', 'ether');
@@ -63,9 +67,11 @@ describe('Flight Surety Tests', async () => {
 					console.log(e);
 				}
 				result = await config.flightSuretyData.isAirlineActive(newAirline);
+				registerAirlinesNumber = (await config.flightSuretyData.getPendingAirlineAddresses()).length;
+
 				// ASSERT
 				assert.equal(result, true, "Airline should be able to activate another airline if it has provided enough funding");
-			
+				assert.equal(registerAirlinesNumber, 4, "There should be 3 registered airlines");
 			});
 		});
 	});
