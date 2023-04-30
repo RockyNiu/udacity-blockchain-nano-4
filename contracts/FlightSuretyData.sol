@@ -18,7 +18,8 @@ contract FlightSuretyData {
     mapping(address => uint8) private authorizedContracts; // Contract who could add new airline
 
     mapping(address => Airline) private airlines; // all airlines added
-    uint256 private registeredAirLinesCount;
+    address[] private pendingAirlineAddresses;
+    address[] private registeredAirlineAddresses;
 
     bool private operational = true; // Blocks all state changes throughout the contract if false
 
@@ -47,6 +48,7 @@ contract FlightSuretyData {
      */
     constructor() {
         contractOwner = msg.sender;
+        authorizedContracts[msg.sender] = 1;
     }
 
     /********************************************************************************************/
@@ -86,10 +88,11 @@ contract FlightSuretyData {
      */
     modifier requireRegisteredAirline() {
         require(
-            airlines[tx.origin].airlineAddress != address(0x0),
+            registeredAirlineAddresses.length == 0 ||
+            airlines[msg.sender].airlineAddress != address(0x0),
             "Airline does not exist"
         );
-        require(airlines[tx.origin].isRegistered, "Airline is not registered");
+        require(registeredAirlineAddresses.length == 0 || airlines[msg.sender].isRegistered, "Airline is not registered");
         _;
     }
 
@@ -142,6 +145,44 @@ contract FlightSuretyData {
         delete authorizedContracts[_contractAddress];
     }
 
+    function getRegisteredAirlineAddresses() external view returns(address[] memory) {
+        return registeredAirlineAddresses;
+    }
+
+    function getPendingAirlineAddresses() external view returns(address[] memory) {
+        return pendingAirlineAddresses;
+    }
+
+    function getAirlineInfo(address _airlineAddress) external view returns(
+        string memory _name,
+        bool _isRegistered,
+        bool _isActive,
+        uint256 _fund,
+        uint256 _voteCount
+        ) {
+        _name = airlines[_airlineAddress].name;
+        _isRegistered = airlines[_airlineAddress].isRegistered;
+        _isActive = airlines[_airlineAddress].isActive;
+        _fund = airlines[_airlineAddress].fund;
+        _voteCount = airlines[_airlineAddress].voteCount;
+    }
+
+    function _removePendingAirlineAddress(address _airlineAddress) internal {
+        uint256 _index = _indexOfAddressArray(pendingAirlineAddresses, _airlineAddress);
+        require(_index < pendingAirlineAddresses.length, 'Index is out of bound');
+        pendingAirlineAddresses[_index] = pendingAirlineAddresses[pendingAirlineAddresses.length.sub(1)];
+        pendingAirlineAddresses.pop();
+    }
+
+    function _indexOfAddressArray(address[] storage _addresses, address _address) internal view returns (uint256){
+        for (uint256 i = 0; i < _addresses.length; i = i.add(1)) {
+            if (_addresses[i] == _address) {
+                return i;
+            }
+        }
+        revert('Index was not found');
+    }
+
     /********************************************************************************************/
     /*                                     SMART CONTRACT FUNCTIONS                             */
     /********************************************************************************************/
@@ -159,21 +200,27 @@ contract FlightSuretyData {
         payable
         requireIsOperational
         requireRegisteredAirline
-        requireIsCallerAuthorized
+        // requireIsCallerAuthorized // can't make sender is both registeredAirline Address and appContract Address
     {
-        Airline storage _airline = airlines[_airlineAddress];
-        _airline.airlineAddress = _airlineAddress;
-        _airline.name = _name;
-        _airline.isRegistered = false;
-        _airline.isActive = false;
-        _airline.fund = msg.value;
-        _airline.votes[tx.origin] = 1;
-        _airline.voteCount = 1;
+        airlines[_airlineAddress].airlineAddress = _airlineAddress;
+        airlines[_airlineAddress].name = _name;
+        airlines[_airlineAddress].isRegistered = false;
+        airlines[_airlineAddress].isActive = false;
+        airlines[_airlineAddress].fund = msg.value;
+        airlines[_airlineAddress].votes[msg.sender] = 1;
+        airlines[_airlineAddress].voteCount = 1;
         emit AirlineIsPreRegistered(_airlineAddress, _name);
-        if (registeredAirLinesCount <= AIRLINE_FREELY_REGISTRY_MAX_NUMBER) {
-            _airline.isRegistered = true;
-            registeredAirLinesCount = registeredAirLinesCount.add(1);
+        if (registeredAirlineAddresses.length <= AIRLINE_FREELY_REGISTRY_MAX_NUMBER) {
+            airlines[_airlineAddress].isRegistered = true;
+            registeredAirlineAddresses.push(_airlineAddress);
             emit AirlineIsRegistered(_airlineAddress, _name);
+            if (msg.value >= MIN_ACTIVE_FUND) {
+                airlines[_airlineAddress].isActive = true;
+                emit AirlineIsActivated(_airlineAddress, _name);
+            }
+        }
+        else {
+            pendingAirlineAddresses.push(_airlineAddress);
         }
     }
 
@@ -189,16 +236,17 @@ contract FlightSuretyData {
         requireRegisteredAirline
         requireNotVoted(_airlineAddress)
     {
-        airlines[_airlineAddress].votes[tx.origin] = 1;
+        airlines[_airlineAddress].votes[msg.sender] = 1;
         airlines[_airlineAddress].voteCount = airlines[_airlineAddress]
             .voteCount
             .add(1);
         if (
             !airlines[_airlineAddress].isRegistered &&
-            airlines[_airlineAddress].voteCount >= registeredAirLinesCount.div(2)
+            airlines[_airlineAddress].voteCount >= registeredAirlineAddresses.length.div(2)
         ) {
             airlines[_airlineAddress].isRegistered = true;
-            registeredAirLinesCount = registeredAirLinesCount.add(1);
+            registeredAirlineAddresses.push(_airlineAddress);
+            _removePendingAirlineAddress(_airlineAddress);
             emit AirlineIsRegistered(
                 _airlineAddress,
                 airlines[_airlineAddress].name
@@ -216,24 +264,33 @@ contract FlightSuretyData {
         requireIsOperational
         requireRegisteredAirline
     {
-        airlines[tx.origin].fund = airlines[tx.origin].fund.add(msg.value);
-        emit FundAirline(tx.origin, airlines[tx.origin].name);
+        airlines[msg.sender].fund = airlines[msg.sender].fund.add(msg.value);
+        emit FundAirline(msg.sender, airlines[msg.sender].name);
         if (
-            !airlines[tx.origin].isActive &&
-            airlines[tx.origin].fund >= MIN_ACTIVE_FUND
+            !airlines[msg.sender].isActive &&
+            airlines[msg.sender].fund >= MIN_ACTIVE_FUND
         ) {
-            airlines[tx.origin].isActive = true;
-            emit AirlineIsActivated(tx.origin, airlines[tx.origin].name);
+            airlines[msg.sender].isActive = true;
+            emit AirlineIsActivated(msg.sender, airlines[msg.sender].name);
         }
     }
 
-        /**
+    /**
      * @dev Get the airline register status
      *
      * @return A bool indicates the airline if registered or not
      */
-    function isRegistedAirline(address _airlineAddress) external view returns (bool) {
+    function isAirlineRegistered(address _airlineAddress) external view returns (bool) {
         return airlines[_airlineAddress].isRegistered;
+    }
+
+    /**
+     * @dev Get the airline active status
+     *
+     * @return A bool indicates the airline if active or not
+     */
+    function isAirlineActive(address _airlineAddress) external view returns (bool) {
+        return airlines[_airlineAddress].isActive;
     }
 
     /**

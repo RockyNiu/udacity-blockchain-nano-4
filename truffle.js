@@ -1,6 +1,6 @@
 const HDWalletProvider = require("@truffle/hdwallet-provider");
-const fs = require('fs');
-const mnemonicPhrase = fs.readFileSync(".secret").toString().trim();
+const config = require('./config/config-prod.js');
+const mnemonicPhrase = config.secret.trim();
 
 module.exports = {
   networks: {
@@ -15,7 +15,7 @@ module.exports = {
         }),
       network_id: '*',
       gas: 5000000,
-      gasPrice: 765625000
+      gasPrice: 875000000
     }
   },
   compilers: {

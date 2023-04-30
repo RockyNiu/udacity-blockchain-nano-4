@@ -65,4 +65,5 @@ typings/
 
 ~$*.pptx
 
-.secret
+# production config
+config-prod.js
