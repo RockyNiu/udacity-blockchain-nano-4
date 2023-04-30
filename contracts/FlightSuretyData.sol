@@ -12,7 +12,7 @@ contract FlightSuretyData {
     /********************************************************************************************/
 
     uint8 private constant AIRLINE_FREELY_REGISTRY_MAX_NUMBER = 4;
-    uint256 private constant MIN_ACTIVE_FUND = 10 ether;
+    uint256 private constant MIN_ACTIVE_FUND = 10 wei;
 
     address private contractOwner; // Account used to deploy contract
     mapping(address => uint8) private authorizedContracts; // Contract who could add new airline

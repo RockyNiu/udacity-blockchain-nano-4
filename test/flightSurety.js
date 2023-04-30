@@ -37,7 +37,7 @@ describe('Flight Surety Tests', async () => {
 
 				// ARRANGE
 				newAirline = accounts[3];
-				let value = web3.utils.toWei('9', 'ether');
+				let value = web3.utils.toWei('9', 'wei');
 
 				// ACT
 				try {
@@ -53,7 +53,7 @@ describe('Flight Surety Tests', async () => {
 			
 				// ARRANGE
 				newAirline = accounts[4];
-				value = web3.utils.toWei('10', 'ether');
+				value = web3.utils.toWei('10', 'wei');
 
 				// ACT
 				try {
