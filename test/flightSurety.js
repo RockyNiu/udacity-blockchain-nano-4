@@ -31,7 +31,7 @@ describe('Flight Surety Tests', async () => {
 					console.log(e);
 				}
 				let result = await config.flightSuretyData.isAirlineActive(newAirline);
-				let registerAirlinesNumber = (await config.flightSuretyData.getPendingAirlineAddresses()).length;
+				let registerAirlinesNumber = (await config.flightSuretyData.getRegisteredAirlineAddresses()).length;
 
 				// ASSERT
 				assert.equal(result, false, "Airline should not be able to activate another airline if it hasn't provided funding");
@@ -49,7 +49,7 @@ describe('Flight Surety Tests', async () => {
 					console.log(e);
 				}
 				result = await config.flightSuretyData.isAirlineActive(newAirline);
-				registerAirlinesNumber = (await config.flightSuretyData.getPendingAirlineAddresses()).length;
+				registerAirlinesNumber = (await config.flightSuretyData.getRegisteredAirlineAddresses()).length;
 
 				// ASSERT
 				assert.equal(result, false, "Airline should not be able to activate another airline if it hasn't provided enough funding");
@@ -67,7 +67,7 @@ describe('Flight Surety Tests', async () => {
 					console.log(e);
 				}
 				result = await config.flightSuretyData.isAirlineActive(newAirline);
-				registerAirlinesNumber = (await config.flightSuretyData.getPendingAirlineAddresses()).length;
+				registerAirlinesNumber = (await config.flightSuretyData.getRegisteredAirlineAddresses()).length;
 
 				// ASSERT
 				assert.equal(result, true, "Airline should be able to activate another airline if it has provided enough funding");
