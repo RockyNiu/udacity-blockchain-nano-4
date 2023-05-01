@@ -246,7 +246,7 @@ contract FlightSuretyData {
             .add(1);
         if (
             !airlines[_airlineAddress].isRegistered &&
-            airlines[_airlineAddress].voteCount >= registeredAirlineAddresses.length.div(2)
+            airlines[_airlineAddress].voteCount >= registeredAirlineAddresses.length.add(1).div(2)
         ) {
             airlines[_airlineAddress].isRegistered = true;
             registeredAirlineAddresses.push(_airlineAddress);
