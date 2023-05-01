@@ -1,23 +1,30 @@
 
 const Test = require('../config/testConfig.js');
 const BigNumber = require('bignumber.js');
+const unit = 'ether';
 let accounts;
 let config;
+let flightSuretyData;
+let flightSuretyApp;
+let firstAirline;
 
 contract('FlightSurety Contract', async (_accounts) => {
 	accounts = _accounts;
+	config = await Test.Config(accounts);
+	flightSuretyData = config.flightSuretyData;
+	flightSuretyApp = config.flightSuretyApp;
+	firstAirline = config.firstAirline;
 });
 
 describe('Flight Surety Tests', async () => {
 	before(async () => {
-		config = await Test.Config(accounts);
-		await config.flightSuretyData.authorizeContract(config.flightSuretyApp.address);
+		await flightSuretyData.authorizeContract(flightSuretyApp.address);
 	});
 
 	describe('FlightSuretyData Tests', async () => {
 		describe('FlightSuretyData Activate Airline', async () => {
 			before(async () => {
-				await config.flightSuretyData.registerAirline(config.firstAirline, 'First Airline');
+				await flightSuretyData.registerAirline(firstAirline, 'First Airline');
 			});
 
 			it('register multiple arilines', async () => {
@@ -25,13 +32,14 @@ describe('Flight Surety Tests', async () => {
 				let newAirline = accounts[2];
 				// ACT
 				try {
-					await config.flightSuretyData.registerAirline(newAirline, 'Second Airline', { from: config.firstAirline });
+					await flightSuretyData.registerAirline(newAirline, 'Second Airline', { from: firstAirline });
 				}
 				catch (e) {
 					console.log(e);
 				}
-				let isAirlineActive = await config.flightSuretyData.isAirlineActive(newAirline);
-				let registerAirlinesNumber = (await config.flightSuretyData.getRegisteredAirlineAddresses()).length;
+
+				let isAirlineActive = await flightSuretyData.isAirlineActive(newAirline);
+				let registerAirlinesNumber = (await flightSuretyData.getRegisteredAirlineAddresses()).length;
 
 				// ASSERT
 				assert.equal(isAirlineActive, false, "Airline should not be able to activate another airline if it hasn't provided funding");
@@ -39,17 +47,18 @@ describe('Flight Surety Tests', async () => {
 
 				// ARRANGE
 				newAirline = accounts[3];
-				let value = web3.utils.toWei('9', 'wei');
+				let value = web3.utils.toWei('9', unit);
 
 				// ACT
 				try {
-					await config.flightSuretyData.registerAirline(newAirline, 'Third Airline', { from: config.firstAirline, value });
+					await flightSuretyData.registerAirline(newAirline, 'Third Airline', { from: firstAirline, value });
 				}
 				catch (e) {
 					console.log(e);
 				}
-				isAirlineActive = await config.flightSuretyData.isAirlineActive(newAirline);
-				registerAirlinesNumber = (await config.flightSuretyData.getRegisteredAirlineAddresses()).length;
+
+				isAirlineActive = await flightSuretyData.isAirlineActive(newAirline);
+				registerAirlinesNumber = (await flightSuretyData.getRegisteredAirlineAddresses()).length;
 
 				// ASSERT
 				assert.equal(isAirlineActive, false, "Airline should not be able to activate another airline if it hasn't provided enough funding");
@@ -57,17 +66,18 @@ describe('Flight Surety Tests', async () => {
 
 				// ARRANGE
 				newAirline = accounts[4];
-				value = web3.utils.toWei('10', 'wei');
+				value = web3.utils.toWei('10', unit);
 
 				// ACT
 				try {
-					await config.flightSuretyData.registerAirline(newAirline, 'Fouth Airline', { from: config.firstAirline, value });
+					await flightSuretyData.registerAirline(newAirline, 'Fouth Airline', { from: firstAirline, value });
 				}
 				catch (e) {
 					console.log(e);
 				}
-				isAirlineActive = await config.flightSuretyData.isAirlineActive(newAirline);
-				registerAirlinesNumber = (await config.flightSuretyData.getRegisteredAirlineAddresses()).length;
+
+				isAirlineActive = await flightSuretyData.isAirlineActive(newAirline);
+				registerAirlinesNumber = (await flightSuretyData.getRegisteredAirlineAddresses()).length;
 
 				// ASSERT
 				assert.equal(isAirlineActive, true, "Airline should be able to activate another airline if it has provided enough funding");
@@ -75,18 +85,18 @@ describe('Flight Surety Tests', async () => {
 
 				// ARRANGE
 				newAirline = accounts[5];
-				value = web3.utils.toWei('10', 'wei');
+				value = web3.utils.toWei('10', unit);
 
 				// ACT
 				try {
-					await config.flightSuretyData.registerAirline(newAirline, 'Fifth Airline', { from: config.firstAirline, value });
+					await flightSuretyData.registerAirline(newAirline, 'Fifth Airline', { from: firstAirline, value });
 				}
 				catch (e) {
 					console.log(e);
 				}
-				let isAirlineRegistered = await config.flightSuretyData.isAirlineRegistered(newAirline);
-				isAirlineActive = await config.flightSuretyData.isAirlineActive(newAirline);
-				registerAirlinesNumber = (await config.flightSuretyData.getRegisteredAirlineAddresses()).length;
+				let isAirlineRegistered = await flightSuretyData.isAirlineRegistered(newAirline);
+				isAirlineActive = await flightSuretyData.isAirlineActive(newAirline);
+				registerAirlinesNumber = (await flightSuretyData.getRegisteredAirlineAddresses()).length;
 
 				// ASSERT
 				assert.equal(isAirlineRegistered, false, "Airline should not be able to activate another airline immediately if there is at least 4 registered airlines");
@@ -95,15 +105,15 @@ describe('Flight Surety Tests', async () => {
 
 				// ACT
 				try {
-					await config.flightSuretyData.voteAirline(newAirline, { from: accounts[2] });
+					await flightSuretyData.voteAirline(newAirline, { from: accounts[2] });
 				}
 				catch (e) {
 					console.log(e);
 				}
-				let voteCount = (await config.flightSuretyData.getAirlineInfo(newAirline))._voteCount;
-				isAirlineRegistered = await config.flightSuretyData.isAirlineRegistered(newAirline);
-				isAirlineActive = await config.flightSuretyData.isAirlineActive(newAirline);
-				registerAirlinesNumber = (await config.flightSuretyData.getRegisteredAirlineAddresses()).length;
+				let voteCount = (await flightSuretyData.getAirlineInfo(newAirline))._voteCount;
+				isAirlineRegistered = await flightSuretyData.isAirlineRegistered(newAirline);
+				isAirlineActive = await flightSuretyData.isAirlineActive(newAirline);
+				registerAirlinesNumber = (await flightSuretyData.getRegisteredAirlineAddresses()).length;
 
 				// ASSERT
 				assert.equal(voteCount, 2, "two airlines voted");

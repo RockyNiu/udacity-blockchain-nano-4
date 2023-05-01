@@ -39,7 +39,7 @@ contract FlightSuretyData {
 
     event AirlineIsPreRegistered(address _airlineAddress, string _name);
     event AirlineIsRegistered(address _airlineAddress, string _name);
-    event FundAirline(address _airlineAddress, string _name);
+    event FundAirline(address _airlineAddress, string _name, uint256 _funding);
     event AirlineIsActivated(address _airlineAddress, string _name);
 
     /**
@@ -270,14 +270,8 @@ contract FlightSuretyData {
         requireRegisteredAirline
     {
         airlines[msg.sender].funding = airlines[msg.sender].funding.add(msg.value);
-        emit FundAirline(msg.sender, airlines[msg.sender].name);
-        if (
-            !airlines[msg.sender].isActive &&
-            airlines[msg.sender].funding >= MIN_ACTIVE_FUND
-        ) {
-            airlines[msg.sender].isActive = true;
-            emit AirlineIsActivated(msg.sender, airlines[msg.sender].name);
-        }
+        emit FundAirline(msg.sender, airlines[msg.sender].name, msg.value);
+        _checkFunding(msg.sender);
     }
 
     /**
