@@ -20,7 +20,7 @@ describe('Flight Surety Tests', async () => {
 				await config.flightSuretyData.registerAirline(config.firstAirline, 'First Airline');
 			});
 
-			it('(airline) cannot activate an Airline using registerAirline() if it is not funded', async () => {
+			it('register multiple arilines', async () => {
 				// ARRANGE
 				let newAirline = accounts[2];
 				// ACT
@@ -92,6 +92,24 @@ describe('Flight Surety Tests', async () => {
 				assert.equal(isAirlineRegistered, false, "Airline should not be able to activate another airline immediately if there is at least 4 registered airlines");
 				assert.equal(isAirlineActive, false, "Airline should not be able to be activated if it's not registered");
 				assert.equal(registerAirlinesNumber, 4, "There should be 4 registered airlines");
+
+				// ACT
+				try {
+					await config.flightSuretyData.voteAirline(newAirline, { from: accounts[2] });
+				}
+				catch (e) {
+					console.log(e);
+				}
+				let voteCount = (await config.flightSuretyData.getAirlineInfo(newAirline))._voteCount;
+				isAirlineRegistered = await config.flightSuretyData.isAirlineRegistered(newAirline);
+				isAirlineActive = await config.flightSuretyData.isAirlineActive(newAirline);
+				registerAirlinesNumber = (await config.flightSuretyData.getRegisteredAirlineAddresses()).length;
+
+				// ASSERT
+				assert.equal(voteCount, 2, "two airlines voted");
+				assert.equal(isAirlineRegistered, true, "multi-party consensus of 50% among 4 registered airlines");
+				assert.equal(isAirlineActive, true, "Airline should be able to be activated if it's registered and has enough funding");
+				assert.equal(registerAirlinesNumber, 5, "There should be 5 registered airlines");
 			});
 		});
 	});
