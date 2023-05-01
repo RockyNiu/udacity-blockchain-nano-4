@@ -10,14 +10,14 @@ let firstAirline;
 
 contract('FlightSurety Contract', async (_accounts) => {
 	accounts = _accounts;
-	config = await Test.Config(accounts);
-	flightSuretyData = config.flightSuretyData;
-	flightSuretyApp = config.flightSuretyApp;
-	firstAirline = config.firstAirline;
 });
 
 describe('Flight Surety Tests', async () => {
 	before(async () => {
+		config = await Test.Config(accounts);
+		flightSuretyData = config.flightSuretyData;
+		flightSuretyApp = config.flightSuretyApp;
+		firstAirline = config.firstAirline;
 		await flightSuretyData.authorizeContract(flightSuretyApp.address);
 	});
 
