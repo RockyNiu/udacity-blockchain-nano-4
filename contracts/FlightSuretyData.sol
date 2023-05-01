@@ -210,7 +210,7 @@ contract FlightSuretyData {
         airlines[_airlineAddress].votes[msg.sender] = 1;
         airlines[_airlineAddress].voteCount = 1;
         emit AirlineIsPreRegistered(_airlineAddress, _name);
-        if (registeredAirlineAddresses.length <= AIRLINE_FREELY_REGISTRY_MAX_NUMBER) {
+        if (registeredAirlineAddresses.length < AIRLINE_FREELY_REGISTRY_MAX_NUMBER) {
             airlines[_airlineAddress].isRegistered = true;
             registeredAirlineAddresses.push(_airlineAddress);
             emit AirlineIsRegistered(_airlineAddress, _name);
