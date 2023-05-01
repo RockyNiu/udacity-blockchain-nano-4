@@ -183,6 +183,13 @@ contract FlightSuretyData {
         revert('Index was not found');
     }
 
+    function _checkFunding(address _airlineAddress) internal requireIsOperational {
+        if (airlines[_airlineAddress].funding >= MIN_ACTIVE_FUND) {
+            airlines[_airlineAddress].isActive = true;
+            emit AirlineIsActivated(_airlineAddress, airlines[_airlineAddress].name);
+        }
+    }
+
     /********************************************************************************************/
     /*                                     SMART CONTRACT FUNCTIONS                             */
     /********************************************************************************************/
@@ -214,10 +221,7 @@ contract FlightSuretyData {
             airlines[_airlineAddress].isRegistered = true;
             registeredAirlineAddresses.push(_airlineAddress);
             emit AirlineIsRegistered(_airlineAddress, _name);
-            if (msg.value >= MIN_ACTIVE_FUND) {
-                airlines[_airlineAddress].isActive = true;
-                emit AirlineIsActivated(_airlineAddress, _name);
-            }
+            _checkFunding(_airlineAddress);
         }
         else {
             pendingAirlineAddresses.push(_airlineAddress);
@@ -251,10 +255,7 @@ contract FlightSuretyData {
                 _airlineAddress,
                 airlines[_airlineAddress].name
             );
-            if (airlines[_airlineAddress].funding >= MIN_ACTIVE_FUND) {
-                airlines[_airlineAddress].isActive = true;
-                emit AirlineIsActivated(_airlineAddress, airlines[_airlineAddress].name);
-            }
+            _checkFunding(_airlineAddress);
         }
     }
 
