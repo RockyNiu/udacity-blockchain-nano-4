@@ -28,7 +28,7 @@ contract FlightSuretyData {
         string name;
         bool isRegistered;
         bool isActive;
-        uint256 fund;
+        uint256 funding;
         mapping(address => uint8) votes;
         uint256 voteCount;
     }
@@ -157,13 +157,13 @@ contract FlightSuretyData {
         string memory _name,
         bool _isRegistered,
         bool _isActive,
-        uint256 _fund,
+        uint256 _funding,
         uint256 _voteCount
         ) {
         _name = airlines[_airlineAddress].name;
         _isRegistered = airlines[_airlineAddress].isRegistered;
         _isActive = airlines[_airlineAddress].isActive;
-        _fund = airlines[_airlineAddress].fund;
+        _funding = airlines[_airlineAddress].funding;
         _voteCount = airlines[_airlineAddress].voteCount;
     }
 
@@ -200,13 +200,13 @@ contract FlightSuretyData {
         payable
         requireIsOperational
         requireRegisteredAirline
-        // requireIsCallerAuthorized // can't make sender is both registeredAirline Address and appContract Address
+        // requireIsCallerAuthorized // can't make caller is both registeredAirline Address and appContract Address
     {
         airlines[_airlineAddress].airlineAddress = _airlineAddress;
         airlines[_airlineAddress].name = _name;
         airlines[_airlineAddress].isRegistered = false;
         airlines[_airlineAddress].isActive = false;
-        airlines[_airlineAddress].fund = msg.value;
+        airlines[_airlineAddress].funding = msg.value;
         airlines[_airlineAddress].votes[msg.sender] = 1;
         airlines[_airlineAddress].voteCount = 1;
         emit AirlineIsPreRegistered(_airlineAddress, _name);
@@ -251,6 +251,10 @@ contract FlightSuretyData {
                 _airlineAddress,
                 airlines[_airlineAddress].name
             );
+            if (airlines[_airlineAddress].funding >= MIN_ACTIVE_FUND) {
+                airlines[_airlineAddress].isActive = true;
+                emit AirlineIsActivated(_airlineAddress, airlines[_airlineAddress].name);
+            }
         }
     }
 
@@ -264,11 +268,11 @@ contract FlightSuretyData {
         requireIsOperational
         requireRegisteredAirline
     {
-        airlines[msg.sender].fund = airlines[msg.sender].fund.add(msg.value);
+        airlines[msg.sender].funding = airlines[msg.sender].funding.add(msg.value);
         emit FundAirline(msg.sender, airlines[msg.sender].name);
         if (
             !airlines[msg.sender].isActive &&
-            airlines[msg.sender].fund >= MIN_ACTIVE_FUND
+            airlines[msg.sender].funding >= MIN_ACTIVE_FUND
         ) {
             airlines[msg.sender].isActive = true;
             emit AirlineIsActivated(msg.sender, airlines[msg.sender].name);
