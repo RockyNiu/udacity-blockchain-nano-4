@@ -120,6 +120,82 @@ describe('Flight Surety Tests', async () => {
 				assert.equal(isAirlineRegistered, true, "multi-party consensus of 50% among 4 registered airlines");
 				assert.equal(isAirlineActive, true, "Airline should be able to be activated if it's registered and has enough funding");
 				assert.equal(registerAirlinesNumber, 5, "There should be 5 registered airlines");
+
+				// ARRANGE
+				newAirline = accounts[6];
+				value = web3.utils.toWei('9', unit);
+
+				// ACT
+				try {
+					await flightSuretyData.registerAirline(newAirline, 'Fifth Airline', { from: firstAirline, value });
+				}
+				catch (e) {
+					console.log(e);
+				}
+				isAirlineRegistered = await flightSuretyData.isAirlineRegistered(newAirline);
+				isAirlineActive = await flightSuretyData.isAirlineActive(newAirline);
+				registerAirlinesNumber = (await flightSuretyData.getRegisteredAirlineAddresses()).length;
+
+				// ASSERT
+				assert.equal(isAirlineRegistered, false, "Airline should not be able to activate another airline immediately if there is at least 4 registered airlines");
+				assert.equal(isAirlineActive, false, "Airline should not be able to be activated if it's not registered");
+				assert.equal(registerAirlinesNumber, 5, "There should be 5 registered airlines");
+
+				// ACT
+				try {
+					await flightSuretyData.voteAirline(newAirline, { from: accounts[2] });
+					await flightSuretyData.voteAirline(newAirline, { from: firstAirline });
+				}
+				catch (e) {
+					console.log(e);
+				}
+				voteCount = (await flightSuretyData.getAirlineInfo(newAirline))._voteCount;
+				isAirlineRegistered = await flightSuretyData.isAirlineRegistered(newAirline);
+				isAirlineActive = await flightSuretyData.isAirlineActive(newAirline);
+				registerAirlinesNumber = (await flightSuretyData.getRegisteredAirlineAddresses()).length;
+
+				// ASSERT
+				assert.equal(voteCount, 2, "two airlines voted");
+				assert.equal(isAirlineRegistered, false, "multi-party consensus of 50% among 5 registered airlines");
+				assert.equal(isAirlineActive, false, "Airline should not be able to be activated if it's not registered");
+				assert.equal(registerAirlinesNumber, 5, "There should be 5 registered airlines");
+
+				// ACT
+				try {
+					await flightSuretyData.voteAirline(newAirline, { from: accounts[3] });
+				}
+				catch (e) {
+					console.log(e);
+				}
+				voteCount = (await flightSuretyData.getAirlineInfo(newAirline))._voteCount;
+				isAirlineRegistered = await flightSuretyData.isAirlineRegistered(newAirline);
+				isAirlineActive = await flightSuretyData.isAirlineActive(newAirline);
+				registerAirlinesNumber = (await flightSuretyData.getRegisteredAirlineAddresses()).length;
+
+				// ASSERT
+				assert.equal(voteCount, 3, "three airlines voted");
+				assert.equal(isAirlineRegistered, true, "multi-party consensus of 50% among 5 registered airlines");
+				assert.equal(isAirlineActive, false, "Airline should not be able to be activated if it has no enoguth funding");
+				assert.equal(registerAirlinesNumber, 6, "There should be 6 registered airlines");
+
+				value = web3.utils.toWei('1', unit);
+				// ACT
+				try {
+					await flightSuretyData.fundAirline({ from: newAirline, value });
+				}
+				catch (e) {
+					console.log(e);
+				}
+				let funding = (await flightSuretyData.getAirlineInfo(newAirline))._funding;
+				isAirlineRegistered = await flightSuretyData.isAirlineRegistered(newAirline);
+				isAirlineActive = await flightSuretyData.isAirlineActive(newAirline);
+				registerAirlinesNumber = (await flightSuretyData.getRegisteredAirlineAddresses()).length;
+
+				// ASSERT
+				assert.equal(funding, web3.utils.toWei('10', unit), `enough funding: 10 ${unit}`);
+				assert.equal(isAirlineRegistered, true, "multi-party consensus of 50% among 5 registered airlines");
+				assert.equal(isAirlineActive, true, "Airline should not be able to be activated if it has enoguth funding");
+				assert.equal(registerAirlinesNumber, 6, "There should be 6 registered airlines");
 			});
 		});
 	});
