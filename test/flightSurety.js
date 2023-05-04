@@ -26,7 +26,7 @@ describe('Flight Surety Tests', async () => {
 			before(async () => {
 				await flightSuretyData.registerAirline(firstAirline, 'First Airline');
 			});
-
+			
 			it('register multiple arilines', async () => {
 				// ARRANGE
 				let newAirline = accounts[2];
@@ -110,7 +110,7 @@ describe('Flight Surety Tests', async () => {
 				catch (e) {
 					console.log(e);
 				}
-				let voteCount = (await flightSuretyData.getAirlineInfo(newAirline))._voteCount;
+				let voteCount = (await flightSuretyData.getAirlineInfo(newAirline)).voteCount;
 				isAirlineRegistered = await flightSuretyData.isAirlineRegistered(newAirline);
 				isAirlineActive = await flightSuretyData.isAirlineActive(newAirline);
 				registerAirlinesNumber = (await flightSuretyData.getRegisteredAirlineAddresses()).length;
@@ -149,7 +149,7 @@ describe('Flight Surety Tests', async () => {
 				catch (e) {
 					console.log(e);
 				}
-				voteCount = (await flightSuretyData.getAirlineInfo(newAirline))._voteCount;
+				voteCount = (await flightSuretyData.getAirlineInfo(newAirline)).voteCount;
 				isAirlineRegistered = await flightSuretyData.isAirlineRegistered(newAirline);
 				isAirlineActive = await flightSuretyData.isAirlineActive(newAirline);
 				registerAirlinesNumber = (await flightSuretyData.getRegisteredAirlineAddresses()).length;
@@ -167,7 +167,7 @@ describe('Flight Surety Tests', async () => {
 				catch (e) {
 					console.log(e);
 				}
-				voteCount = (await flightSuretyData.getAirlineInfo(newAirline))._voteCount;
+				voteCount = (await flightSuretyData.getAirlineInfo(newAirline)).voteCount;
 				isAirlineRegistered = await flightSuretyData.isAirlineRegistered(newAirline);
 				isAirlineActive = await flightSuretyData.isAirlineActive(newAirline);
 				registerAirlinesNumber = (await flightSuretyData.getRegisteredAirlineAddresses()).length;
@@ -186,7 +186,7 @@ describe('Flight Surety Tests', async () => {
 				catch (e) {
 					console.log(e);
 				}
-				let funding = (await flightSuretyData.getAirlineInfo(newAirline))._funding;
+				let funding = (await flightSuretyData.getAirlineInfo(newAirline)).funding;
 				isAirlineRegistered = await flightSuretyData.isAirlineRegistered(newAirline);
 				isAirlineActive = await flightSuretyData.isAirlineActive(newAirline);
 				registerAirlinesNumber = (await flightSuretyData.getRegisteredAirlineAddresses()).length;

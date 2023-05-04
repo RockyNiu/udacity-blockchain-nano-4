@@ -14,6 +14,14 @@ contract FlightSuretyData {
     uint8 private constant AIRLINE_FREELY_REGISTRY_MAX_NUMBER = 4;
     uint256 private constant MIN_ACTIVE_FUND = 10 wei;
 
+    // Flight status codees
+    uint8 private constant STATUS_CODE_UNKNOWN = 0;
+    uint8 private constant STATUS_CODE_ON_TIME = 10;
+    uint8 private constant STATUS_CODE_LATE_AIRLINE = 20;
+    uint8 private constant STATUS_CODE_LATE_WEATHER = 30;
+    uint8 private constant STATUS_CODE_LATE_TECHNICAL = 40;
+    uint8 private constant STATUS_CODE_LATE_OTHER = 50;
+
     address private contractOwner; // Account used to deploy contract
     mapping(address => uint8) private authorizedContracts; // Contract who could add new airline
 
@@ -22,6 +30,11 @@ contract FlightSuretyData {
     address[] private registeredAirlineAddresses;
 
     bool private operational = true; // Blocks all state changes throughout the contract if false
+
+    mapping(bytes32 => Flight) private flights;
+    bytes32[] private flightKeys;
+    mapping(bytes32 => InsurancePolicy[]) private insurancePolicies; // insurance policies per flight
+    mapping(address => uint256) private pendingPayments;
 
     struct Airline {
         address airlineAddress;
@@ -33,14 +46,53 @@ contract FlightSuretyData {
         uint256 voteCount;
     }
 
+    struct Flight {
+        address airlineAddress;
+        string name;
+        string from;
+        string to;
+        uint256 timestamp;
+        uint8 statusCode;
+    }
+
+    struct InsurancePolicy {
+        address passengerAddress;
+        uint256 premium;
+        uint256 faceAmount;
+        bool isCredited;
+    }
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
 
-    event AirlineIsPreRegistered(address _airlineAddress, string _name);
-    event AirlineIsRegistered(address _airlineAddress, string _name);
-    event FundAirline(address _airlineAddress, string _name, uint256 _funding);
-    event AirlineIsActivated(address _airlineAddress, string _name);
+    event AirlineIsPreRegistered(address airlineAddress, string name);
+    event AirlineIsRegistered(address airlineAddress, string name);
+    event FundAirline(address airlineAddress, string name, uint256 funding);
+    event AirlineIsActivated(address airlineAddress, string name);
+    event FlightIsRegistered(
+        bytes32 flightKey,
+        address airlineAddress,
+        string flightName,
+        string from,
+        string to,
+        uint256 timestamp
+    );
+    event FlightStatusIsUpdated(
+        address airlineAddress,
+        string flightName,
+        uint256 timestamp,
+        uint8 statusCode
+    );
+    event InsuranceIsBought(
+        address airlineAddress,
+        string flightName,
+        uint256 timestamp,
+        address passengerAddress,
+        uint256 premium,
+        uint256 faceAmount
+    );
+    event InsureeIsCredited(address insureeAddress, uint256 faceAmount);
+    event Withdrawn(address passengerAddress, uint256 payment);
 
     /**
      * @dev Constructor
@@ -65,7 +117,7 @@ contract FlightSuretyData {
      */
     modifier requireIsOperational() {
         require(operational, "Contract is currently not operational");
-        _; // All modifiers require an "_" which indicates where the function body will be added
+        _; // All modifiers require an "" which indicates where the function body will be added
     }
 
     /**
@@ -89,23 +141,27 @@ contract FlightSuretyData {
     modifier requireRegisteredAirline() {
         require(
             registeredAirlineAddresses.length == 0 ||
-            airlines[msg.sender].airlineAddress != address(0x0),
+                airlines[msg.sender].airlineAddress != address(0x0),
             "Airline does not exist"
         );
-        require(registeredAirlineAddresses.length == 0 || airlines[msg.sender].isRegistered, "Airline is not registered");
+        require(
+            registeredAirlineAddresses.length == 0 ||
+                airlines[msg.sender].isRegistered,
+            "Airline is not registered"
+        );
         _;
     }
 
     /**
      * @dev Modifier that requires the function caller to be not voted yet
      */
-    modifier requireNotVoted(address _airlineAddress) {
+    modifier requireNotVoted(address airlineAddress) {
         require(
-            airlines[_airlineAddress].airlineAddress != address(0x0),
+            airlines[airlineAddress].airlineAddress != address(0x0),
             "Airline to be voted does not exist"
         );
         require(
-            airlines[_airlineAddress].votes[msg.sender] != 1,
+            airlines[airlineAddress].votes[msg.sender] != 1,
             "Already voted"
         );
         _;
@@ -134,59 +190,138 @@ contract FlightSuretyData {
     }
 
     function authorizeContract(
-        address _contractAddress
+        address contractAddress
     ) external requireContractOwner {
-        authorizedContracts[_contractAddress] = 1;
+        authorizedContracts[contractAddress] = 1;
     }
 
     function deauthorizeContract(
-        address _contractAddress
+        address contractAddress
     ) external requireContractOwner {
-        delete authorizedContracts[_contractAddress];
+        delete authorizedContracts[contractAddress];
     }
 
-    function getRegisteredAirlineAddresses() external view returns(address[] memory) {
+    function getRegisteredAirlineAddresses()
+        external
+        view
+        returns (address[] memory)
+    {
         return registeredAirlineAddresses;
     }
 
-    function getPendingAirlineAddresses() external view returns(address[] memory) {
+    function getPendingAirlineAddresses()
+        external
+        view
+        returns (address[] memory)
+    {
         return pendingAirlineAddresses;
     }
 
-    function getAirlineInfo(address _airlineAddress) external view returns(
-        string memory _name,
-        bool _isRegistered,
-        bool _isActive,
-        uint256 _funding,
-        uint256 _voteCount
-        ) {
-        _name = airlines[_airlineAddress].name;
-        _isRegistered = airlines[_airlineAddress].isRegistered;
-        _isActive = airlines[_airlineAddress].isActive;
-        _funding = airlines[_airlineAddress].funding;
-        _voteCount = airlines[_airlineAddress].voteCount;
+    function getFlighKeys()
+        external
+        view
+        returns (bytes32[] memory)
+    {
+        return flightKeys;
     }
 
-    function _removePendingAirlineAddress(address _airlineAddress) internal {
-        uint256 _index = _indexOfAddressArray(pendingAirlineAddresses, _airlineAddress);
-        require(_index < pendingAirlineAddresses.length, 'Index is out of bound');
-        pendingAirlineAddresses[_index] = pendingAirlineAddresses[pendingAirlineAddresses.length.sub(1)];
+    function getPendingPayment(address passengerAddress)
+        external
+        view
+        returns (uint256)
+    {
+        return pendingPayments[passengerAddress];
+    }
+
+    function getAirlineInfo(
+        address airlineAddress
+    )
+        external
+        view
+        returns (
+            string memory name,
+            bool isRegistered,
+            bool isActive,
+            uint256 funding,
+            uint256 voteCount
+        )
+    {
+        name = airlines[airlineAddress].name;
+        isRegistered = airlines[airlineAddress].isRegistered;
+        isActive = airlines[airlineAddress].isActive;
+        funding = airlines[airlineAddress].funding;
+        voteCount = airlines[airlineAddress].voteCount;
+    }
+
+    function getFlightInfo(bytes32 flightKey)
+        external
+        view
+        returns (
+            address airlineAddress,
+            string memory name,
+            string memory from,
+            string memory to,
+            uint256 timestamp,
+            uint8 statusCode
+        )
+    {
+        airlineAddress = flights[flightKey].airlineAddress;
+        name = flights[flightKey].name;
+        from = flights[flightKey].from;
+        to = flights[flightKey].to;
+        timestamp = flights[flightKey].timestamp;
+        statusCode = flights[flightKey].statusCode;
+    }
+
+    function getInsurancePolicyInfo(bytes32 flightKey)
+        external
+        view
+        returns (
+            InsurancePolicy[] memory policies
+        )
+    {
+        policies = insurancePolicies[flightKey];
+    }
+
+    function removePendingAirlineAddress(address airlineAddress) internal {
+        uint256 index = indexOfAddressArray(
+            pendingAirlineAddresses,
+            airlineAddress
+        );
+        require(
+            index < pendingAirlineAddresses.length,
+            "Index is out of bound"
+        );
+        pendingAirlineAddresses[index] = pendingAirlineAddresses[
+            pendingAirlineAddresses.length.sub(1)
+        ];
         pendingAirlineAddresses.pop();
     }
 
-    function _indexOfAddressArray(address[] storage _addresses, address _address) internal view returns (uint256){
-        for (uint256 i = 0; i < _addresses.length; i = i.add(1)) {
-            if (_addresses[i] == _address) {
+    function indexOfAddressArray(
+        address[] storage addresses,
+        address targetAddress
+    ) internal view returns (uint256) {
+        for (uint256 i = 0; i < addresses.length; i = i.add(1)) {
+            if (addresses[i] == targetAddress) {
                 return i;
             }
         }
-        revert('Index was not found');
+        revert("Index was not found");
     }
 
-    function _checkFunding(address _airlineAddress) internal requireIsOperational {
-        if (airlines[_airlineAddress].funding >= MIN_ACTIVE_FUND) {
-            airlines[_airlineAddress].isActive = true;
-            emit AirlineIsActivated(_airlineAddress, airlines[_airlineAddress].name);
+    function checkFunding(
+        address airlineAddress
+    ) internal requireIsOperational {
+        if (
+            !airlines[airlineAddress].isActive &&
+            airlines[airlineAddress].funding >= MIN_ACTIVE_FUND
+        ) {
+            airlines[airlineAddress].isActive = true;
+            emit AirlineIsActivated(
+                airlineAddress,
+                airlines[airlineAddress].name
+            );
         }
     }
 
@@ -200,31 +335,33 @@ contract FlightSuretyData {
      *
      */
     function registerAirline(
-        address _airlineAddress,
-        string calldata _name
+        address airlineAddress,
+        string calldata name
     )
         external
         payable
         requireIsOperational
         requireRegisteredAirline
-        // requireIsCallerAuthorized // can't make caller is both registeredAirline Address and appContract Address
+    // requireIsCallerAuthorized // can't make caller is both registeredAirline Address and appContract Address
     {
-        airlines[_airlineAddress].airlineAddress = _airlineAddress;
-        airlines[_airlineAddress].name = _name;
-        airlines[_airlineAddress].isRegistered = false;
-        airlines[_airlineAddress].isActive = false;
-        airlines[_airlineAddress].funding = msg.value;
-        airlines[_airlineAddress].votes[msg.sender] = 1;
-        airlines[_airlineAddress].voteCount = 1;
-        emit AirlineIsPreRegistered(_airlineAddress, _name);
-        if (registeredAirlineAddresses.length < AIRLINE_FREELY_REGISTRY_MAX_NUMBER) {
-            airlines[_airlineAddress].isRegistered = true;
-            registeredAirlineAddresses.push(_airlineAddress);
-            emit AirlineIsRegistered(_airlineAddress, _name);
-            _checkFunding(_airlineAddress);
-        }
-        else {
-            pendingAirlineAddresses.push(_airlineAddress);
+        airlines[airlineAddress].airlineAddress = airlineAddress;
+        airlines[airlineAddress].name = name;
+        airlines[airlineAddress].isRegistered = false;
+        airlines[airlineAddress].isActive = false;
+        airlines[airlineAddress].funding = msg.value;
+        airlines[airlineAddress].votes[msg.sender] = 1;
+        airlines[airlineAddress].voteCount = 1;
+        emit AirlineIsPreRegistered(airlineAddress, name);
+        if (
+            registeredAirlineAddresses.length <
+            AIRLINE_FREELY_REGISTRY_MAX_NUMBER
+        ) {
+            airlines[airlineAddress].isRegistered = true;
+            registeredAirlineAddresses.push(airlineAddress);
+            emit AirlineIsRegistered(airlineAddress, name);
+            checkFunding(airlineAddress);
+        } else {
+            pendingAirlineAddresses.push(airlineAddress);
         }
     }
 
@@ -233,29 +370,30 @@ contract FlightSuretyData {
      *
      */
     function voteAirline(
-        address _airlineAddress
+        address airlineAddress
     )
         external
         requireIsOperational
         requireRegisteredAirline
-        requireNotVoted(_airlineAddress)
+        requireNotVoted(airlineAddress)
     {
-        airlines[_airlineAddress].votes[msg.sender] = 1;
-        airlines[_airlineAddress].voteCount = airlines[_airlineAddress]
+        airlines[airlineAddress].votes[msg.sender] = 1;
+        airlines[airlineAddress].voteCount = airlines[airlineAddress]
             .voteCount
             .add(1);
         if (
-            !airlines[_airlineAddress].isRegistered &&
-            airlines[_airlineAddress].voteCount >= registeredAirlineAddresses.length.add(1).div(2)
+            !airlines[airlineAddress].isRegistered &&
+            airlines[airlineAddress].voteCount >=
+            registeredAirlineAddresses.length.add(1).div(2)
         ) {
-            airlines[_airlineAddress].isRegistered = true;
-            registeredAirlineAddresses.push(_airlineAddress);
-            _removePendingAirlineAddress(_airlineAddress);
+            airlines[airlineAddress].isRegistered = true;
+            registeredAirlineAddresses.push(airlineAddress);
+            removePendingAirlineAddress(airlineAddress);
             emit AirlineIsRegistered(
-                _airlineAddress,
-                airlines[_airlineAddress].name
+                airlineAddress,
+                airlines[airlineAddress].name
             );
-            _checkFunding(_airlineAddress);
+            checkFunding(airlineAddress);
         }
     }
 
@@ -269,9 +407,11 @@ contract FlightSuretyData {
         requireIsOperational
         requireRegisteredAirline
     {
-        airlines[msg.sender].funding = airlines[msg.sender].funding.add(msg.value);
+        airlines[msg.sender].funding = airlines[msg.sender].funding.add(
+            msg.value
+        );
         emit FundAirline(msg.sender, airlines[msg.sender].name, msg.value);
-        _checkFunding(msg.sender);
+        checkFunding(msg.sender);
     }
 
     /**
@@ -279,8 +419,10 @@ contract FlightSuretyData {
      *
      * @return A bool indicates the airline if registered or not
      */
-    function isAirlineRegistered(address _airlineAddress) external view returns (bool) {
-        return airlines[_airlineAddress].isRegistered;
+    function isAirlineRegistered(
+        address airlineAddress
+    ) external view returns (bool) {
+        return airlines[airlineAddress].isRegistered;
     }
 
     /**
@@ -288,26 +430,138 @@ contract FlightSuretyData {
      *
      * @return A bool indicates the airline if active or not
      */
-    function isAirlineActive(address _airlineAddress) external view returns (bool) {
-        return airlines[_airlineAddress].isActive;
+    function isAirlineActive(
+        address airlineAddress
+    ) external view returns (bool) {
+        return airlines[airlineAddress].isActive;
     }
 
     /**
-     * @dev Buy insurance for a flight
-     *
+     * @dev Register a flight
      */
-    function buy() external payable {}
+    function registerFlight(
+        address airlineAddress,
+        string calldata name,
+        string calldata from,
+        string calldata to,
+        uint256 timestamp
+    ) external requireIsOperational requireIsCallerAuthorized {
+        bytes32 flightKey = getFlightKey(airlineAddress, name, timestamp);
+        require(
+            flights[flightKey].airlineAddress != address(0x0),
+            "Fight has been registered!"
+        );
+        flights[flightKey] = Flight({
+            airlineAddress: airlineAddress,
+            name: name,
+            from: from,
+            to: to,
+            timestamp: timestamp,
+            statusCode: STATUS_CODE_UNKNOWN
+        });
+        flightKeys.push(flightKey);
+        emit FlightIsRegistered(
+            flightKey,
+            airlineAddress,
+            name,
+            from,
+            to,
+            timestamp
+        );
+    }
 
     /**
-     *  @dev Credits payouts to insurees
+     * @dev Register a flight
      */
-    function creditInsurees() external pure {}
+    function updateFlightStatus(
+        address airlineAddress,
+        string calldata flightName,
+        uint256 timestamp,
+        uint8 statusCode
+    ) external requireIsOperational requireIsCallerAuthorized {
+        bytes32 flightKey = getFlightKey(airlineAddress, flightName, timestamp);
+        flights[flightKey].statusCode = statusCode;
+        emit FlightStatusIsUpdated(
+            airlineAddress,
+            flightName,
+            timestamp,
+            statusCode
+        );
+        if (statusCode == STATUS_CODE_LATE_AIRLINE) {
+            creditInsurees(airlineAddress, flightName, timestamp);
+        }
+    }
+
+    /**
+     * @dev Buy insurance for a flight. TODO check maximum amount of premium should be smaller than 1 ether
+     *
+     */
+    function buy(
+        address airlineAddress,
+        string calldata flightName,
+        uint256 timestamp,
+        address passengerAddress,
+        uint256 premium,
+        uint256 faceAmount
+    ) external payable requireIsOperational requireIsCallerAuthorized {
+        bytes32 flightKey = getFlightKey(airlineAddress, flightName, timestamp);
+        insurancePolicies[flightKey].push(InsurancePolicy({
+            passengerAddress: passengerAddress,
+            premium: premium,
+            faceAmount: faceAmount,
+            isCredited: false
+        }));
+        emit InsuranceIsBought(
+            airlineAddress,
+            flightName,
+            timestamp,
+            passengerAddress,
+            premium,
+            faceAmount
+        );
+    }
+
+    /**
+     *  @dev Credits payouts to insurees. TODO check whether there is enough fund for transfer to all
+     */
+    function creditInsurees(
+        address airlineAddress,
+        string calldata flightName,
+        uint256 timestamp
+    ) internal requireIsOperational requireIsCallerAuthorized {
+        bytes32 flightKey = getFlightKey(airlineAddress, flightName, timestamp);
+        for (uint i = 0; i < insurancePolicies[flightKey].length; i++) {
+            InsurancePolicy memory policy = insurancePolicies[flightKey][i];
+            if (!policy.isCredited) {
+                policy.isCredited = true;
+                pendingPayments[policy.passengerAddress] += policy.faceAmount;
+                emit InsureeIsCredited(
+                    policy.passengerAddress,
+                    policy.faceAmount
+                );
+            }
+        }
+    }
 
     /**
      *  @dev Transfers eligible payout funds to insuree
      *
      */
-    function pay() external pure {}
+    function pay(
+        address passengerAddress
+    ) external requireIsOperational requireIsCallerAuthorized {
+        require(passengerAddress == tx.origin, "Not allowed");
+        require(
+            pendingPayments[passengerAddress] > 0,
+            "No fund awailable for withdrawal"
+        );
+
+        uint256 payment = pendingPayments[passengerAddress];
+        pendingPayments[passengerAddress] = 0;
+
+        payable(passengerAddress).transfer(payment);
+        emit Withdrawn(passengerAddress, payment);
+    }
 
     /**
      * @dev Initial funding for the insurance. Unless there are too many delayed flights
@@ -317,11 +571,11 @@ contract FlightSuretyData {
     function fund() public payable {}
 
     function getFlightKey(
-        address airline,
-        string memory flight,
+        address airlineAddress,
+        string calldata name,
         uint256 timestamp
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(airline, flight, timestamp));
+        return keccak256(abi.encodePacked(airlineAddress, name, timestamp));
     }
 
     /**
