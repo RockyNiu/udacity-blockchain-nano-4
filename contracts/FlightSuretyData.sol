@@ -217,19 +217,13 @@ contract FlightSuretyData {
         return pendingAirlineAddresses;
     }
 
-    function getFlighKeys()
-        external
-        view
-        returns (bytes32[] memory)
-    {
+    function getFlighKeys() external view returns (bytes32[] memory) {
         return flightKeys;
     }
 
-    function getPendingPayment(address passengerAddress)
-        external
-        view
-        returns (uint256)
-    {
+    function getPendingPayment(
+        address passengerAddress
+    ) external view returns (uint256) {
         return pendingPayments[passengerAddress];
     }
 
@@ -253,33 +247,23 @@ contract FlightSuretyData {
         voteCount = airlines[airlineAddress].voteCount;
     }
 
-    function getFlightInfo(bytes32 flightKey)
+    function getFlightKeys()
         external
         view
-        returns (
-            address airlineAddress,
-            string memory name,
-            string memory from,
-            string memory to,
-            uint256 timestamp,
-            uint8 statusCode
-        )
+        returns (bytes32[] memory _flightKeys)
     {
-        airlineAddress = flights[flightKey].airlineAddress;
-        name = flights[flightKey].name;
-        from = flights[flightKey].from;
-        to = flights[flightKey].to;
-        timestamp = flights[flightKey].timestamp;
-        statusCode = flights[flightKey].statusCode;
+        _flightKeys = flightKeys;
     }
 
-    function getInsurancePolicyInfo(bytes32 flightKey)
-        external
-        view
-        returns (
-            InsurancePolicy[] memory policies
-        )
-    {
+    function getFlightInfo(
+        bytes32 flightKey
+    ) external view returns (Flight memory flight) {
+        flight = flights[flightKey];
+    }
+
+    function getInsurancePolicyInfo(
+        bytes32 flightKey
+    ) external view returns (InsurancePolicy[] memory policies) {
         policies = insurancePolicies[flightKey];
     }
 
@@ -448,8 +432,8 @@ contract FlightSuretyData {
     ) external requireIsOperational requireIsCallerAuthorized {
         bytes32 flightKey = getFlightKey(airlineAddress, name, timestamp);
         require(
-            flights[flightKey].airlineAddress != address(0x0),
-            "Fight has been registered!"
+            flights[flightKey].airlineAddress == address(0x0),
+            "Flight has been registered!"
         );
         flights[flightKey] = Flight({
             airlineAddress: airlineAddress,
@@ -505,12 +489,14 @@ contract FlightSuretyData {
         uint256 faceAmount
     ) external payable requireIsOperational requireIsCallerAuthorized {
         bytes32 flightKey = getFlightKey(airlineAddress, flightName, timestamp);
-        insurancePolicies[flightKey].push(InsurancePolicy({
-            passengerAddress: passengerAddress,
-            premium: premium,
-            faceAmount: faceAmount,
-            isCredited: false
-        }));
+        insurancePolicies[flightKey].push(
+            InsurancePolicy({
+                passengerAddress: passengerAddress,
+                premium: premium,
+                faceAmount: faceAmount,
+                isCredited: false
+            })
+        );
         emit InsuranceIsBought(
             airlineAddress,
             flightName,

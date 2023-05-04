@@ -19,14 +19,11 @@ describe('Flight Surety Tests', async () => {
 		flightSuretyApp = config.flightSuretyApp;
 		firstAirline = config.firstAirline;
 		await flightSuretyData.authorizeContract(flightSuretyApp.address);
+		await flightSuretyData.registerAirline(firstAirline, 'First Airline');
 	});
 
 	describe('FlightSuretyData Tests', async () => {
 		describe('FlightSuretyData Activate Airline', async () => {
-			before(async () => {
-				await flightSuretyData.registerAirline(firstAirline, 'First Airline');
-			});
-			
 			it('register multiple arilines', async () => {
 				// ARRANGE
 				let newAirline = accounts[2];
@@ -196,6 +193,35 @@ describe('Flight Surety Tests', async () => {
 				assert.equal(isAirlineRegistered, true, "multi-party consensus of 50% among 5 registered airlines");
 				assert.equal(isAirlineActive, true, "Airline should not be able to be activated if it has enoguth funding");
 				assert.equal(registerAirlinesNumber, 6, "There should be 6 registered airlines");
+			});
+		});
+
+		describe('FlightSuretyData Buy Insurance', async () => {
+			it('register flight', async () => {
+				// ARRANGE
+				const name = 'First Flight';
+				const from = 'New York';
+				const to = 'Shanghai';
+				const timeStamp = Math.floor(new Date('2023-01-01').getTime() / 1000);
+
+				// ACT
+				try {
+					await flightSuretyData.registerFlight(firstAirline, name, from, to, timeStamp);
+				}
+				catch (e) {
+					console.log(e);
+				}
+
+				const flightKeys = await flightSuretyData.getFlightKeys();
+				const flight = await flightSuretyData.getFlightInfo(flightKeys[0]);
+
+				// ASSERT
+				assert.equal(flight.airlineAddress, firstAirline, "Airline Address");
+				assert.equal(flight.name, name, "Flight Name");
+				assert.equal(flight.from, from, "From");
+				assert.equal(flight.to, to, "To");
+				assert.equal(flight.timestamp, timeStamp, "Timestamp");
+				assert.equal(flight.statusCode, '0', "Status Code");
 			});
 		});
 	});
