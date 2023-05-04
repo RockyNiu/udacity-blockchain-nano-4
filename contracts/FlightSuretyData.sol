@@ -58,7 +58,7 @@ contract FlightSuretyData {
     struct InsurancePolicy {
         address passengerAddress;
         uint256 premium;
-        uint256 faceAmout;
+        uint256 faceAmount;
         bool isCredited;
     }
     /********************************************************************************************/
@@ -89,9 +89,9 @@ contract FlightSuretyData {
         uint256 timestamp,
         address passengerAddress,
         uint256 premium,
-        uint256 faceAmout
+        uint256 faceAmount
     );
-    event InsureeIsCredited(address insureeAddress, uint256 faceAmout);
+    event InsureeIsCredited(address insureeAddress, uint256 faceAmount);
     event Withdrawn(address passengerAddress, uint256 payment);
 
     /**
@@ -217,6 +217,22 @@ contract FlightSuretyData {
         return pendingAirlineAddresses;
     }
 
+    function getFlighKeys()
+        external
+        view
+        returns (bytes32[] memory)
+    {
+        return flightKeys;
+    }
+
+    function getPendingPayment(address passengerAddress)
+        external
+        view
+        returns (uint256)
+    {
+        return pendingPayments[passengerAddress];
+    }
+
     function getAirlineInfo(
         address airlineAddress
     )
@@ -235,6 +251,36 @@ contract FlightSuretyData {
         isActive = airlines[airlineAddress].isActive;
         funding = airlines[airlineAddress].funding;
         voteCount = airlines[airlineAddress].voteCount;
+    }
+
+    function getFlightInfo(bytes32 flightKey)
+        external
+        view
+        returns (
+            address airlineAddress,
+            string memory name,
+            string memory from,
+            string memory to,
+            uint256 timestamp,
+            uint8 statusCode
+        )
+    {
+        airlineAddress = flights[flightKey].airlineAddress;
+        name = flights[flightKey].name;
+        from = flights[flightKey].from;
+        to = flights[flightKey].to;
+        timestamp = flights[flightKey].timestamp;
+        statusCode = flights[flightKey].statusCode;
+    }
+
+    function getInsurancePolicyInfo(bytes32 flightKey)
+        external
+        view
+        returns (
+            InsurancePolicy[] memory policies
+        )
+    {
+        policies = insurancePolicies[flightKey];
     }
 
     function removePendingAirlineAddress(address airlineAddress) internal {
@@ -456,13 +502,13 @@ contract FlightSuretyData {
         uint256 timestamp,
         address passengerAddress,
         uint256 premium,
-        uint256 faceAmout
+        uint256 faceAmount
     ) external payable requireIsOperational requireIsCallerAuthorized {
         bytes32 flightKey = getFlightKey(airlineAddress, flightName, timestamp);
         insurancePolicies[flightKey].push(InsurancePolicy({
             passengerAddress: passengerAddress,
             premium: premium,
-            faceAmout: faceAmout,
+            faceAmount: faceAmount,
             isCredited: false
         }));
         emit InsuranceIsBought(
@@ -471,7 +517,7 @@ contract FlightSuretyData {
             timestamp,
             passengerAddress,
             premium,
-            faceAmout
+            faceAmount
         );
     }
 
@@ -488,10 +534,10 @@ contract FlightSuretyData {
             InsurancePolicy memory policy = insurancePolicies[flightKey][i];
             if (!policy.isCredited) {
                 policy.isCredited = true;
-                pendingPayments[policy.passengerAddress] += policy.faceAmout;
+                pendingPayments[policy.passengerAddress] += policy.faceAmount;
                 emit InsureeIsCredited(
                     policy.passengerAddress,
-                    policy.faceAmout
+                    policy.faceAmount
                 );
             }
         }
