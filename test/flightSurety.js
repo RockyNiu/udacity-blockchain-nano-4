@@ -1,7 +1,7 @@
 
 const Test = require('../config/testConfig.js');
 const BigNumber = require('bignumber.js');
-const unit = 'ether';
+const unit = 'wei';
 let accounts;
 let config;
 let flightSuretyData;
