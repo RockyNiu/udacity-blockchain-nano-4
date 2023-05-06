@@ -12,7 +12,7 @@ contract FlightSuretyData {
     /********************************************************************************************/
 
     uint8 private constant AIRLINE_FREELY_REGISTRY_MAX_NUMBER = 4;
-    uint256 private constant MIN_ACTIVE_FUND = 10 wei;
+    uint256 private constant MIN_ACTIVE_FUND = 10 gwei;
 
     // Flight status codees
     uint8 private constant STATUS_CODE_UNKNOWN = 0;
