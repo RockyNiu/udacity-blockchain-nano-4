@@ -25,7 +25,7 @@ describe('Flight Surety Tests', async () => {
 				// Ensure that access is denied for non-Contract Owner account
 				let accessDenied = false;
 				try {
-					await config.flightSuretyData.setOperatingStatus(false, { from: config.testAddresses[2] });
+					await config.flightSuretyData.setOperatingStatus(false, { from: config.testAddresses[0] });
 				}
 				catch (e) {
 					accessDenied = true;

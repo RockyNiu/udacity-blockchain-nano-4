@@ -519,8 +519,8 @@ contract FlightSuretyData {
         for (uint i = 0; i < insurancePolicies[flightKey].length; i++) {
             InsurancePolicy memory policy = insurancePolicies[flightKey][i];
             if (!policy.isCredited) {
-                policy.isCredited = true;
-                pendingPayments[policy.passengerAddress] += policy.faceAmount;
+                insurancePolicies[flightKey][i].isCredited = true;
+                pendingPayments[policy.passengerAddress] = pendingPayments[policy.passengerAddress].add(policy.faceAmount);
                 emit InsureeIsCredited(
                     policy.passengerAddress,
                     policy.faceAmount
@@ -536,7 +536,6 @@ contract FlightSuretyData {
     function pay(
         address passengerAddress
     ) external requireIsOperational requireIsCallerAuthorized {
-        require(passengerAddress == tx.origin, "Not allowed");
         require(
             pendingPayments[passengerAddress] > 0,
             "No fund awailable for withdrawal"
