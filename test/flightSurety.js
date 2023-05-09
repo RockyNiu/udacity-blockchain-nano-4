@@ -180,7 +180,7 @@ describe('Flight Surety Tests', async () => {
 				value = web3.utils.toWei('1', unit);
 				// ACT
 				try {
-					await flightSuretyData.fundAirline({ from: newAirline, value });
+					await flightSuretyApp.fundAirline({ from: newAirline, value });
 				}
 				catch (e) {
 					console.log(e);

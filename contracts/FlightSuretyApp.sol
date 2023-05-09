@@ -126,6 +126,23 @@ contract FlightSuretyApp {
     }
 
     /**
+     * @dev Fund an airline
+     *
+     */
+    function fundAirline()
+        external
+        payable
+        requireIsOperational
+        requireRegisteredAirline
+        returns (bool success, uint256 votes)
+    {
+        flightSuretyData.fundAirline{value: msg.value}(msg.sender);
+        success = true;
+        votes = 1;
+    }
+
+
+    /**
      * @dev Register a future flight for insuring.
      *
      */
