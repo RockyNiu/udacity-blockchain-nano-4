@@ -98,9 +98,18 @@ contract FlightSuretyData {
      * @dev Constructor
      *      The deploying account becomes contractOwner
      */
-    constructor() {
+    constructor(address firstAirlineAddress, string memory firstAirlineName) {
         contractOwner = msg.sender;
         authorizedContracts[msg.sender] = 1;
+        airlines[firstAirlineAddress].airlineAddress = firstAirlineAddress;
+        airlines[firstAirlineAddress].name = firstAirlineName;
+        airlines[firstAirlineAddress].isRegistered = true;
+        airlines[firstAirlineAddress].isActive = false;
+        airlines[firstAirlineAddress].votes[msg.sender] = 1;
+        airlines[firstAirlineAddress].voteCount = 1;
+
+        registeredAirlineAddresses.push(firstAirlineAddress);
+        emit AirlineIsRegistered(firstAirlineAddress, firstAirlineName);
     }
 
     /********************************************************************************************/
@@ -155,13 +164,13 @@ contract FlightSuretyData {
     /**
      * @dev Modifier that requires the function caller to be not voted yet
      */
-    modifier requireNotVoted(address airlineAddress) {
+    modifier requireNotVoted(address voterAddress, address airlineAddress) {
         require(
             airlines[airlineAddress].airlineAddress != address(0x0),
             "Airline to be voted does not exist"
         );
         require(
-            airlines[airlineAddress].votes[msg.sender] != 1,
+            airlines[airlineAddress].votes[voterAddress] != 1,
             "Already voted"
         );
         _;
@@ -319,21 +328,21 @@ contract FlightSuretyData {
      *
      */
     function registerAirline(
+        address registerAddress,
         address airlineAddress,
         string calldata name
     )
         external
         payable
         requireIsOperational
-        requireRegisteredAirline
-    // requireIsCallerAuthorized // can't make caller is both registeredAirline Address and appContract Address
+        requireIsCallerAuthorized
     {
         airlines[airlineAddress].airlineAddress = airlineAddress;
         airlines[airlineAddress].name = name;
         airlines[airlineAddress].isRegistered = false;
         airlines[airlineAddress].isActive = false;
         airlines[airlineAddress].funding = msg.value;
-        airlines[airlineAddress].votes[msg.sender] = 1;
+        airlines[airlineAddress].votes[registerAddress] = 1;
         airlines[airlineAddress].voteCount = 1;
         emit AirlineIsPreRegistered(airlineAddress, name);
         if (
@@ -354,14 +363,14 @@ contract FlightSuretyData {
      *
      */
     function voteAirline(
+        address voterAddress,
         address airlineAddress
     )
         external
         requireIsOperational
-        requireRegisteredAirline
-        requireNotVoted(airlineAddress)
+        requireNotVoted(voterAddress, airlineAddress)
     {
-        airlines[airlineAddress].votes[msg.sender] = 1;
+        airlines[airlineAddress].votes[voterAddress] = 1;
         airlines[airlineAddress].voteCount = airlines[airlineAddress]
             .voteCount
             .add(1);

@@ -23,14 +23,6 @@ contract FlightSuretyApp {
     address private contractOwner; // Account used to deploy contract
     FlightSuretyData private flightSuretyData;
 
-    struct Flight {
-        bool isRegistered;
-        uint8 statusCode;
-        uint256 updatedTimestamp;
-        address airline;
-    }
-    mapping(bytes32 => Flight) private flights;
-
     /********************************************************************************************/
     /*                                       FUNCTION MODIFIERS                                 */
     /********************************************************************************************/
@@ -53,6 +45,17 @@ contract FlightSuretyApp {
      */
     modifier requireContractOwner() {
         require(msg.sender == contractOwner, 'Caller is not contract owner');
+        _;
+    }
+
+    /**
+     * @dev Modifier that requires the registered airline account to be the function caller
+     */
+    modifier requireRegisteredAirline() {
+        require(
+            flightSuretyData.isAirlineRegistered(msg.sender),
+            "Airline is not registered"
+        );
         _;
     }
 
@@ -94,12 +97,32 @@ contract FlightSuretyApp {
      * @dev Add an airline to the registration queue
      *
      */
-    function registerAirline()
+    function registerAirline(address airlineAddress, string calldata name)
         external
-        pure
+        payable
+        requireIsOperational
+        requireRegisteredAirline
         returns (bool success, uint256 votes)
     {
-        return (success, 0);
+        flightSuretyData.registerAirline{value: msg.value}(msg.sender, airlineAddress, name);
+        success = true;
+        votes = 1;
+    }
+
+    /**
+     * @dev Vote an airline
+     *
+     */
+    function voteAirline(address airlineAddress)
+        external
+        payable
+        requireIsOperational
+        requireRegisteredAirline
+        returns (bool success, uint256 votes)
+    {
+        flightSuretyData.voteAirline(msg.sender, airlineAddress);
+        success = true;
+        votes = 1;
     }
 
     /**

@@ -4,8 +4,7 @@ const FlightSuretyData = artifacts.require("FlightSuretyData");
 const fs = require('fs');
 
 module.exports = function (deployer) {
-    deployer.deploy(FlightSuretyData).then(async (flightSuretyData) => {
-        await flightSuretyData.registerAirline(config.firstAirlineAddress, config.firstAirlineName);
+    deployer.deploy(FlightSuretyData, config.firstAirlineAddress, config.firstAirlineName).then(async (flightSuretyData) => {
         const flightSuretyApp = await deployer.deploy(FlightSuretyApp, flightSuretyData.address);
         await flightSuretyData.authorizeContract(flightSuretyApp.address);
         const configContent = {

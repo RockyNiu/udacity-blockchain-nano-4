@@ -22,7 +22,7 @@ const Config = async function (accounts) {
     const owner = accounts[0];
     const firstAirline = accounts[1];
 
-    const flightSuretyData = await FlightSuretyData.new();
+    const flightSuretyData = await FlightSuretyData.new(firstAirline, 'First Airline');
     const flightSuretyApp = await FlightSuretyApp.new(flightSuretyData.address);
 
     return {
