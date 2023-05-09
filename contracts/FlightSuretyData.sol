@@ -144,22 +144,6 @@ contract FlightSuretyData {
         );
         _;
     }
-    /**
-     * @dev Modifier that requires the registered airline account to be the function caller
-     */
-    modifier requireRegisteredAirline() {
-        require(
-            registeredAirlineAddresses.length == 0 ||
-                airlines[msg.sender].airlineAddress != address(0x0),
-            "Airline does not exist"
-        );
-        require(
-            registeredAirlineAddresses.length == 0 ||
-                airlines[msg.sender].isRegistered,
-            "Airline is not registered"
-        );
-        _;
-    }
 
     /**
      * @dev Modifier that requires the function caller to be not voted yet
@@ -369,6 +353,7 @@ contract FlightSuretyData {
         external
         requireIsOperational
         requireNotVoted(voterAddress, airlineAddress)
+        requireIsCallerAuthorized
     {
         airlines[airlineAddress].votes[voterAddress] = 1;
         airlines[airlineAddress].voteCount = airlines[airlineAddress]
@@ -394,17 +379,17 @@ contract FlightSuretyData {
      * @dev Fund an airline
      *
      */
-    function fundAirline()
+    function fundAirline(address funderAddress)
         external
         payable
         requireIsOperational
-        requireRegisteredAirline
+        requireIsCallerAuthorized
     {
-        airlines[msg.sender].funding = airlines[msg.sender].funding.add(
+        airlines[funderAddress].funding = airlines[funderAddress].funding.add(
             msg.value
         );
-        emit FundAirline(msg.sender, airlines[msg.sender].name, msg.value);
-        checkFunding(msg.sender);
+        emit FundAirline(funderAddress, airlines[funderAddress].name, msg.value);
+        checkFunding(funderAddress);
     }
 
     /**
