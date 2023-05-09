@@ -19,18 +19,17 @@ describe('Flight Surety Tests', async () => {
 		flightSuretyApp = config.flightSuretyApp;
 		firstAirline = config.firstAirline;
 		await flightSuretyData.authorizeContract(flightSuretyApp.address);
-		await flightSuretyData.registerAirline(firstAirline, 'First Airline');
 	});
 
-	describe('FlightSuretyData Tests', async () => {
+	describe('FlightSurety Tests', async () => {
 		let errorReason;
-		describe('FlightSuretyData Activate Airline', async () => {
+		describe('FlightSurety Activate Airline', async () => {
 			it('register multiple arilines', async () => {
 				// ARRANGE
 				let newAirline = accounts[2];
 				// ACT
 				try {
-					await flightSuretyData.registerAirline(newAirline, 'Second Airline', { from: firstAirline });
+					await flightSuretyApp.registerAirline(newAirline, 'Second Airline', { from: firstAirline });
 				}
 				catch (e) {
 					console.log(e);
@@ -49,7 +48,7 @@ describe('Flight Surety Tests', async () => {
 
 				// ACT
 				try {
-					await flightSuretyData.registerAirline(newAirline, 'Third Airline', { from: firstAirline, value });
+					await flightSuretyApp.registerAirline(newAirline, 'Third Airline', { from: firstAirline, value });
 				}
 				catch (e) {
 					console.log(e);
@@ -68,7 +67,7 @@ describe('Flight Surety Tests', async () => {
 
 				// ACT
 				try {
-					await flightSuretyData.registerAirline(newAirline, 'Fouth Airline', { from: firstAirline, value });
+					await flightSuretyApp.registerAirline(newAirline, 'Fouth Airline', { from: firstAirline, value });
 				}
 				catch (e) {
 					console.log(e);
@@ -87,7 +86,7 @@ describe('Flight Surety Tests', async () => {
 
 				// ACT
 				try {
-					await flightSuretyData.registerAirline(newAirline, 'Fifth Airline', { from: firstAirline, value });
+					await flightSuretyApp.registerAirline(newAirline, 'Fifth Airline', { from: firstAirline, value });
 				}
 				catch (e) {
 					console.log(e);
@@ -103,7 +102,7 @@ describe('Flight Surety Tests', async () => {
 
 				// ACT
 				try {
-					await flightSuretyData.voteAirline(newAirline, { from: accounts[2] });
+					await flightSuretyApp.voteAirline(newAirline, { from: accounts[2] });
 				}
 				catch (e) {
 					console.log(e);
@@ -125,7 +124,7 @@ describe('Flight Surety Tests', async () => {
 
 				// ACT
 				try {
-					await flightSuretyData.registerAirline(newAirline, 'Fifth Airline', { from: firstAirline, value });
+					await flightSuretyApp.registerAirline(newAirline, 'Sixth Airline', { from: firstAirline, value });
 				}
 				catch (e) {
 					console.log(e);
@@ -141,8 +140,8 @@ describe('Flight Surety Tests', async () => {
 
 				// ACT
 				try {
-					await flightSuretyData.voteAirline(newAirline, { from: accounts[2] });
-					await flightSuretyData.voteAirline(newAirline, { from: firstAirline });
+					await flightSuretyApp.voteAirline(newAirline, { from: accounts[2] });
+					await flightSuretyApp.voteAirline(newAirline, { from: firstAirline });
 				}
 				catch (e) {
 					errorReason = e?.data?.reason;
@@ -151,6 +150,7 @@ describe('Flight Surety Tests', async () => {
 				isAirlineRegistered = await flightSuretyData.isAirlineRegistered(newAirline);
 				isAirlineActive = await flightSuretyData.isAirlineActive(newAirline);
 				registerAirlinesNumber = (await flightSuretyData.getRegisteredAirlineAddresses()).length;
+				console.log(voteCount.toNumber(), isAirlineRegistered, isAirlineActive,registerAirlinesNumber );
 
 				// ASSERT
 				assert.equal(errorReason, 'Already voted', 'can not vote same airline');
@@ -161,7 +161,7 @@ describe('Flight Surety Tests', async () => {
 
 				// ACT
 				try {
-					await flightSuretyData.voteAirline(newAirline, { from: accounts[3] });
+					await flightSuretyApp.voteAirline(newAirline, { from: accounts[3] });
 				}
 				catch (e) {
 					console.log(e);
