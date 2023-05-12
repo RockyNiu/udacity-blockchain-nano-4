@@ -1,11 +1,11 @@
 
-var Test = require('../config/testConfig.js');
+const Test = require('../config/testConfig.js');
 //var BigNumber = require('bignumber.js');
 
 contract('Oracles', async (accounts) => {
 
   const TEST_ORACLES_COUNT = 20;
-  var config;
+  let config;
   before('setup contract', async () => {
     config = await Test.Config(accounts);
 
@@ -23,12 +23,12 @@ contract('Oracles', async (accounts) => {
   it('can register oracles', async () => {
 
     // ARRANGE
-    let fee = await config.flightSuretyApp.REGISTRATION_FEE.call();
+    const fee = await config.flightSuretyApp.REGISTRATION_FEE.call();
 
     // ACT
-    for (let a = 1; a < TEST_ORACLES_COUNT; a++) {
+    for (let a = 21; a < TEST_ORACLES_COUNT; a++) {
       await config.flightSuretyApp.registerOracle({ from: accounts[a], value: fee });
-      let result = await config.flightSuretyApp.getMyIndexes.call({ from: accounts[a] });
+      const result = await config.flightSuretyApp.getMyIndexes.call({ from: accounts[a] });
       console.log(`Oracle Registered: ${result[0]}, ${result[1]}, ${result[2]}`);
     }
   });
@@ -47,7 +47,7 @@ contract('Oracles', async (accounts) => {
     // loop through all the accounts and for each account, all its Indexes (indices?)
     // and submit a response. The contract will reject a submission if it was
     // not requested so while sub-optimal, it's a good test of that feature
-    for (let a = 1; a < TEST_ORACLES_COUNT; a++) {
+    for (let a = 21; a < TEST_ORACLES_COUNT; a++) {
 
       // Get oracle information
       let oracleIndexes = await config.flightSuretyApp.getMyIndexes.call({ from: accounts[a] });
