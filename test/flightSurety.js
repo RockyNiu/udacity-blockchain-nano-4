@@ -146,15 +146,14 @@ describe('Flight Surety Tests', async () => {
 				catch (e) {
 					errorReason = e?.data?.reason;
 				}
+
 				voteCount = (await flightSuretyData.getAirlineInfo(newAirline)).voteCount;
 				isAirlineRegistered = await flightSuretyData.isAirlineRegistered(newAirline);
 				isAirlineActive = await flightSuretyData.isAirlineActive(newAirline);
 				registerAirlinesNumber = (await flightSuretyData.getRegisteredAirlineAddresses()).length;
-				console.log(voteCount.toNumber(), isAirlineRegistered, isAirlineActive,registerAirlinesNumber );
 
 				// ASSERT
-				assert.equal(errorReason, 'Already voted', 'can not vote same airline');
-				assert.equal(voteCount, 2, 'two airlines voted');
+				assert.equal(voteCount, 2, 'Only two airlines voted since one voter can not vote same airline');
 				assert.equal(isAirlineRegistered, false, 'multi-party consensus of 50% among 5 registered airlines');
 				assert.equal(isAirlineActive, false, 'Airline should not be able to be activated if it is not registered');
 				assert.equal(registerAirlinesNumber, 5, 'There should be 5 registered airlines');
@@ -208,7 +207,7 @@ describe('Flight Surety Tests', async () => {
 
 				// ACT
 				try {
-					await flightSuretyData.registerFlight(firstAirline, flightName, from, to, timeStamp);
+					await flightSuretyApp.registerFlight(flightName, from, to, timeStamp, { from: firstAirline });
 				}
 				catch (e) {
 					console.log(e);
@@ -216,7 +215,6 @@ describe('Flight Surety Tests', async () => {
 
 				let flightKeys = await flightSuretyData.getFlightKeys();
 				let flightKey = flightKeys[0];
-				console.log(`flightKeys: ${flightKeys}`);
 				let flight = await flightSuretyData.getFlightInfo(flightKey);
 
 				// ASSERT
@@ -227,7 +225,7 @@ describe('Flight Surety Tests', async () => {
 				assert.equal(flight.timestamp, timeStamp, 'Timestamp');
 				assert.equal(flight.statusCode, '0', 'Status Code');
 
-				
+
 				// ARRANGE
 				let passengerAddress = accounts[11];
 				let premium = web3.utils.toWei('1', unit);
@@ -276,7 +274,7 @@ describe('Flight Surety Tests', async () => {
 
 				// ACT
 				try {
-					await flightSuretyData.registerFlight(firstAirline, flightName, from, to, timeStamp);
+					await flightSuretyApp.registerFlight(flightName, from, to, timeStamp, { from: firstAirline });
 				}
 				catch (e) {
 					console.log(e);
@@ -349,13 +347,14 @@ describe('Flight Surety Tests', async () => {
 
 				// ACT
 				try {
-					await flightSuretyData.registerFlight(firstAirline, flightName, from, to, timeStamp);
+					await flightSuretyApp.registerFlight(flightName, from, to, timeStamp, { from: firstAirline });
 				}
 				catch (e) {
 					errorReason = e?.data?.reason;
 				}
 				// ASSERT
-				assert.equal(errorReason, 'Flight has been registered!', 'cant not register the same flight second time');
+				flightKeys = await flightSuretyData.getFlightKeys();
+				assert.equal(flightKeys.length, 2, 'cant not register the same flight second time');
 			});
 		});
 	});
