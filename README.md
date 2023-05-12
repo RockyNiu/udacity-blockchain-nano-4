@@ -8,11 +8,11 @@ This repository contains Smart Contract code in Solidity (using Truffle), tests 
 
 Please install the following versions to work best with project starter codes
 
-* Truffle v5.8.0 (core: 5.8.0)
-* Ganache v7.7.6
+* Truffle v5.9.0 (core: 5.8.0)
+* Ganache v7.8.0
 * Solidity - ^0.8.0 (solc-js)
 * Node v18.14.2
-* Web3.js v1.8.2
+* Web3.js v1.10.0
 
 To install, download or clone the repo, then:
 `git config --global url."https://github.com/".insteadOf git://github.com/`

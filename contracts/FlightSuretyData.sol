@@ -2,7 +2,9 @@
 
 pragma solidity ^0.8.0;
 
+import "truffle/console.sol";
 import "../node_modules/@openzeppelin/contracts/utils/math/SafeMath.sol";
+
 
 contract FlightSuretyData {
     using SafeMath for uint256;
@@ -354,11 +356,11 @@ contract FlightSuretyData {
         requireIsOperational
         requireNotVoted(voterAddress, airlineAddress)
         requireIsCallerAuthorized
+        returns (uint256 voteCount)
     {
         airlines[airlineAddress].votes[voterAddress] = 1;
-        airlines[airlineAddress].voteCount = airlines[airlineAddress]
-            .voteCount
-            .add(1);
+        voteCount = airlines[airlineAddress].voteCount.add(1);
+        airlines[airlineAddress].voteCount = voteCount;
         if (
             !airlines[airlineAddress].isRegistered &&
             airlines[airlineAddress].voteCount >=
@@ -401,6 +403,17 @@ contract FlightSuretyData {
         address airlineAddress
     ) external view returns (bool) {
         return airlines[airlineAddress].isRegistered;
+    }
+
+    /**
+     * @dev Get the airline register status
+     *
+     * @return A bool indicates the airline if registered or not
+     */
+    function isAirlineNotRegistered(
+        address airlineAddress
+    ) external view returns (bool) {
+        return airlines[airlineAddress].airlineAddress != address(0x0) && airlines[airlineAddress].isRegistered == false;
     }
 
     /**

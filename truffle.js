@@ -16,6 +16,12 @@ module.exports = {
       network_id: '*',
       gas: 5000000,
       gasPrice: 875000000
+    },
+    develop: {
+      port: 8545,
+      network_id: 20,
+      accounts: 50,
+      defaultEtherBalance: 500,
     }
   },
   compilers: {
@@ -25,5 +31,9 @@ module.exports = {
   },
   mocha: {
     timeout: 20000
+  },
+  solidityLog: {
+    displayPrefix: '************', // defaults to ""
+    preventConsoleLogMigration: true, // defaults to false
   }
 };
