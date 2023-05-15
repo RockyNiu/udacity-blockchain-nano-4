@@ -16,7 +16,9 @@ Please install the following versions to work best with project starter codes
 
 To install, download or clone the repo, then:
 `git config --global url."https://github.com/".insteadOf git://github.com/`
+
 `npm install`
+
 `truffle compile`
 
 ## Develop Client
@@ -26,12 +28,15 @@ To run truffle tests:
 `truffle test`
 or run them individually
 `truffle test ./test/flightSurety.js`
+
 `truffle test ./isOperational.js`
+
 `truffle test ./test/oracles.js`
 
 To use the dapp:
 Start the Ganache locally, then
 `truffle migrate`
+
 `npm run dapp`
 
 To view dapp:
