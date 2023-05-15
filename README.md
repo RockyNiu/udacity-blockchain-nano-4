@@ -23,7 +23,10 @@ To install, download or clone the repo, then:
 
 To run truffle tests:
 
+`truffle test`
+or run them individually
 `truffle test ./test/flightSurety.js`
+`truffle test ./isOperational.js`
 `truffle test ./test/oracles.js`
 
 To use the dapp:

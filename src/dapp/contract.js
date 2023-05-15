@@ -25,6 +25,7 @@ export default class Contract {
                 this.airlines.push(accts[counter++]);
             }
 
+            counter = 11;
             while (this.passengers.length < 5) {
                 this.passengers.push(accts[counter++]);
             }
