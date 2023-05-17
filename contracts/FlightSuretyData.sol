@@ -3,12 +3,8 @@
 pragma solidity ^0.8.0;
 
 import "truffle/console.sol";
-import "../node_modules/@openzeppelin/contracts/utils/math/SafeMath.sol";
-
 
 contract FlightSuretyData {
-    using SafeMath for uint256;
-
     /********************************************************************************************/
     /*                                       DATA VARIABLES                                     */
     /********************************************************************************************/
@@ -272,7 +268,7 @@ contract FlightSuretyData {
             "Index is out of bound"
         );
         pendingAirlineAddresses[index] = pendingAirlineAddresses[
-            pendingAirlineAddresses.length.sub(1)
+            pendingAirlineAddresses.length - 1
         ];
         pendingAirlineAddresses.pop();
     }
@@ -281,7 +277,7 @@ contract FlightSuretyData {
         address[] storage addresses,
         address targetAddress
     ) internal view returns (uint256) {
-        for (uint256 i = 0; i < addresses.length; i = i.add(1)) {
+        for (uint256 i = 0; i < addresses.length; i++) {
             if (addresses[i] == targetAddress) {
                 return i;
             }
@@ -317,12 +313,7 @@ contract FlightSuretyData {
         address registerAddress,
         address airlineAddress,
         string calldata name
-    )
-        external
-        payable
-        requireIsOperational
-        requireIsCallerAuthorized
-    {
+    ) external payable requireIsOperational requireIsCallerAuthorized {
         airlines[airlineAddress].airlineAddress = airlineAddress;
         airlines[airlineAddress].name = name;
         airlines[airlineAddress].isRegistered = false;
@@ -359,12 +350,12 @@ contract FlightSuretyData {
         returns (uint256 voteCount)
     {
         airlines[airlineAddress].votes[voterAddress] = 1;
-        voteCount = airlines[airlineAddress].voteCount.add(1);
+        voteCount = airlines[airlineAddress].voteCount + 1;
         airlines[airlineAddress].voteCount = voteCount;
         if (
             !airlines[airlineAddress].isRegistered &&
             airlines[airlineAddress].voteCount >=
-            registeredAirlineAddresses.length.add(1).div(2)
+            (registeredAirlineAddresses.length + 1)/2
         ) {
             airlines[airlineAddress].isRegistered = true;
             registeredAirlineAddresses.push(airlineAddress);
@@ -381,16 +372,15 @@ contract FlightSuretyData {
      * @dev Fund an airline
      *
      */
-    function fundAirline(address funderAddress)
-        external
-        payable
-        requireIsOperational
-        requireIsCallerAuthorized
-    {
-        airlines[funderAddress].funding = airlines[funderAddress].funding.add(
+    function fundAirline(
+        address funderAddress
+    ) external payable requireIsOperational requireIsCallerAuthorized {
+        airlines[funderAddress].funding = airlines[funderAddress].funding + msg.value;
+        emit FundAirline(
+            funderAddress,
+            airlines[funderAddress].name,
             msg.value
         );
-        emit FundAirline(funderAddress, airlines[funderAddress].name, msg.value);
         checkFunding(funderAddress);
     }
 
@@ -413,7 +403,9 @@ contract FlightSuretyData {
     function isAirlineNotRegistered(
         address airlineAddress
     ) external view returns (bool) {
-        return airlines[airlineAddress].airlineAddress != address(0x0) && airlines[airlineAddress].isRegistered == false;
+        return
+            airlines[airlineAddress].airlineAddress != address(0x0) &&
+            airlines[airlineAddress].isRegistered == false;
     }
 
     /**
@@ -527,7 +519,7 @@ contract FlightSuretyData {
             InsurancePolicy memory policy = insurancePolicies[flightKey][i];
             if (!policy.isCredited) {
                 insurancePolicies[flightKey][i].isCredited = true;
-                pendingPayments[policy.passengerAddress] = pendingPayments[policy.passengerAddress].add(policy.faceAmount);
+                pendingPayments[policy.passengerAddress] = pendingPayments[policy.passengerAddress] + policy.faceAmount;
                 emit InsureeIsCredited(
                     policy.passengerAddress,
                     policy.faceAmount
